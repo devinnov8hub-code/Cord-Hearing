@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:cord_hearing/src/core/services/device_repository.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 enum BluetoothScanStatus {
   idle,
@@ -64,24 +63,10 @@ class DevicePairingViewController
     return DevicePairingState();
   }
 
-  Future<bool> _requestPermissions() async {
-    if (Platform.isAndroid) {
-      final statuses = await [
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.location,
-      ].request();
-
-      return statuses.values.every((status) => status.isGranted);
-    }
-    // On iOS, CoreBluetooth automatically requests permissions when you try to use Bluetooth.
-    // Using permission_handler on iOS requires modifying the Podfile.
-    return true;
-  }
-
   Future<void> startScan() async {
     state = state.copyWith(clearError: true);
-    final hasPermissions = await _requestPermissions();
+    final repository = ref.read(deviceRepositoryProvider);
+    final hasPermissions = await repository.checkAndRequestPermissions();
     if (!hasPermissions) {
       state = state.copyWith(
         status: BluetoothScanStatus.error,
@@ -118,21 +103,14 @@ class DevicePairingViewController
     }
   }
 
-  Future<void> connectToDevice(BluetoothDevice? device) async {
+  Future<void> connectToDevice(BluetoothDevice device) async {
     state = state.copyWith(
       status: BluetoothScanStatus.connecting,
     );
     try {
-      if (device != null) {
-        // Stop scanning before connecting to avoid Android GATT Error 133
-        if (FlutterBluePlus.isScanningNow) {
-          await FlutterBluePlus.stopScan();
-        }
-        await device.connect();
-      } else {
-        // Mock connection
-        await Future<void>.delayed(const Duration(seconds: 2));
-      }
+      final repository = ref.read(deviceRepositoryProvider);
+      await repository.connect(device);
+      
       state = state.copyWith(status: BluetoothScanStatus.connected);
     } catch (e) {
       state = state.copyWith(

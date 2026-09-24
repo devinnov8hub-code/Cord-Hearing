@@ -28,10 +28,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  flutter_blue_plus: ^1.31.18
+  flutter_riverpod: ^2.5.1
   flutter_screenutil: ^5.9.3
   flutter_svg: ^2.3.0
-  flutter_riverpod: ^2.5.1
-  flutter_blue_plus: ^1.31.18
   permission_handler: ^11.3.1
 
 dev_dependencies:

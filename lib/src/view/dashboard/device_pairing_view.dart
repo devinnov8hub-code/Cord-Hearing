@@ -2,6 +2,7 @@ import 'package:cord_hearing/src/controller/device_pairing_view_controller.dart'
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
+import 'package:cord_hearing/src/view/dashboard/dashboard_view.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -27,10 +28,20 @@ class DevicePairingView extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 48.verticalSpace,
-                Center(
-                  child: SvgPicture.asset(
-                    AppAssets.bluetoothScanning,
-                    height: 220.h,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push<void>(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (context) => const DashboardView(),
+                      ),
+                    );
+                  },
+                  child: Center(
+                    child: SvgPicture.asset(
+                      AppAssets.bluetoothScanning,
+                      height: 220.h,
+                    ),
                   ),
                 ),
                 32.verticalSpace,
@@ -139,7 +150,6 @@ class DevicePairingView extends ConsumerWidget {
                           )
                         : Builder(
                             builder: (context) {
-                              final isMock = scanState.devices.isEmpty;
                               final connectableDevices = scanState.devices
                                   .where(
                                     (e) =>
@@ -147,37 +157,24 @@ class DevicePairingView extends ConsumerWidget {
                                   )
                                   .toList();
 
-                              final itemCount = isMock
-                                  ? 3
-                                  : connectableDevices.length;
+                              final itemCount = connectableDevices.length;
 
                               return Column(
                                 children: List.generate(
                                   itemCount,
                                   (index) {
-                                    String deviceName;
-                                    BluetoothDevice? currentDevice;
-                                    if (isMock) {
-                                      deviceName = [
-                                        'AID-4435-5e',
-                                        'AID-6721-9x',
-                                        'AID-9813-4k',
-                                      ][index];
-                                    } else {
-                                      final device =
-                                          connectableDevices[index].device;
-                                      currentDevice = device;
-                                      deviceName =
-                                          device.platformName.isNotEmpty
-                                          ? device.platformName
-                                          : device.remoteId.str;
-                                    }
+                                    final device =
+                                        connectableDevices[index].device;
+                                    final deviceName =
+                                        device.platformName.isNotEmpty
+                                        ? device.platformName
+                                        : device.remoteId.str;
 
                                     return Column(
                                       children: [
                                         _DeviceListItem(
                                           name: deviceName,
-                                          device: currentDevice,
+                                          device: device,
                                         ),
                                         if (index < itemCount - 1)
                                           Divider(
@@ -205,9 +202,9 @@ class DevicePairingView extends ConsumerWidget {
 }
 
 class _DeviceListItem extends ConsumerWidget {
-  const _DeviceListItem({required this.name, this.device});
+  const _DeviceListItem({required this.name, required this.device});
   final String name;
-  final BluetoothDevice? device;
+  final BluetoothDevice device;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -264,7 +261,7 @@ class _DeviceListItem extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String deviceName,
-    BluetoothDevice? device,
+    BluetoothDevice device,
   ) {
     showSizeSheet(
       context,
