@@ -1,0 +1,22 @@
+
+
+include: package:very_good_analysis/analysis_options.9.0.0.yaml
+linter:
+
+  rules:
+    avoid_print: true
+    prefer_single_quotes: true
+    always_use_package_imports: true
+    always_declare_return_types: true
+    one_member_abstracts: false
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
+analyzer:
+    errors:
+      avoid_catches_without_on_clauses: ignore
+      avoid_dynamic_calls: ignore
+      avoid_positional_boolean_parameters: ignore
+      document_ignores: ignore
+      implementation_imports: ignore
+      type_annotate_public_apis: ignore
+      use_setters_to_change_properties: false
