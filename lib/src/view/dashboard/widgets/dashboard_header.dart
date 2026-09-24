@@ -1,4 +1,5 @@
 import 'package:cord_hearing/src/core/app_colors.dart';
+import 'package:cord_hearing/src/view/profile/profile_view.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -27,10 +28,17 @@ class DashboardHeader extends StatelessWidget {
             ],
           ),
         ),
-        const Icon(
-          CupertinoIcons.person_alt_circle,
-          size: 32,
-          color: AppColors.primaryColor,
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (context) => const ProfileView()),
+            );
+          },
+          child: const Icon(
+            CupertinoIcons.person_alt_circle,
+            size: 32,
+            color: AppColors.primaryColor,
+          ),
         ),
       ],
     );
