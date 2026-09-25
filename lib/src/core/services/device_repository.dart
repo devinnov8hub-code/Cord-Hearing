@@ -52,6 +52,7 @@ class BleDeviceRepository implements DeviceRepository {
       final statuses = await [
         Permission.bluetoothScan,
         Permission.bluetoothConnect,
+
         Permission.location,
       ].request();
 
@@ -68,7 +69,11 @@ class BleDeviceRepository implements DeviceRepository {
       await FlutterBluePlus.stopScan();
     }
 
-    await device.connect();
+    // Fix for GATT Error 133
+    await device.disconnect();
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    await device.connect(autoConnect: true, mtu: null);
     _connectedDevice = device;
 
     // Listen to connection state changes
@@ -82,18 +87,18 @@ class BleDeviceRepository implements DeviceRepository {
 
     await device.discoverServices();
     // Subscribe to battery characteristic
-    final batteryService = device.servicesList.firstWhere(
-      (s) => s.uuid.toString() == '0000180f-0000-1000-8000-00805f9b34fb',
-    );
-    final batteryCharacteristic = batteryService.characteristics.firstWhere(
-      (c) => c.uuid.toString() == '00002a19-0000-1000-8000-00805f9b34fb',
-    );
-    await batteryCharacteristic.setNotifyValue(true);
-    batteryCharacteristic.lastValueStream.listen((value) {
-      if (value.isNotEmpty) {
-        _batteryLevelController.add(value[0]);
-      }
-    });
+    // final batteryService = device.servicesList.firstWhere(
+    //   (s) => s.uuid.toString() == '0000180f-0000-1000-8000-00805f9b34fb',
+    // );
+    // final batteryCharacteristic = batteryService.characteristics.firstWhere(
+    //   (c) => c.uuid.toString() == '00002a19-0000-1000-8000-00805f9b34fb',
+    // );
+    // await batteryCharacteristic.setNotifyValue(true);
+    // batteryCharacteristic.lastValueStream.listen((value) {
+    //   if (value.isNotEmpty) {
+    //     _batteryLevelController.add(value[0]);
+    //   }
+    // });
   }
 
   @override

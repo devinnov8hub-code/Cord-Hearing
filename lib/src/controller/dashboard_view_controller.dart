@@ -60,7 +60,7 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
     });
 
     final device = repo.connectedDevice;
-    var name = 'AID-4435-5e'; // Fallback to match mock
+    var name = ''; // Fallback to match mock
     if (device != null) {
       name = device.platformName.isNotEmpty
           ? device.platformName

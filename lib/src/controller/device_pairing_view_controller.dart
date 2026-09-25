@@ -51,6 +51,7 @@ class DevicePairingViewController
 
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
       // Keep devices updated while scanning
+      // log(results.toString());
       state = state.copyWith(devices: results);
     });
 
@@ -110,7 +111,7 @@ class DevicePairingViewController
     try {
       final repository = ref.read(deviceRepositoryProvider);
       await repository.connect(device);
-      
+
       state = state.copyWith(status: BluetoothScanStatus.connected);
     } catch (e) {
       state = state.copyWith(

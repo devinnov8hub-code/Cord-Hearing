@@ -15,6 +15,17 @@ class DevicePairingView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(bluetoothScanProvider, (previous, next) {
+      if (next.status == BluetoothScanStatus.connected) {
+        Navigator.pushReplacement<void, void>(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => const DashboardView(),
+          ),
+        );
+      }
+    });
+
     final scanState = ref.watch(bluetoothScanProvider);
     final isScanning = scanState.status == BluetoothScanStatus.scanning;
 
@@ -150,12 +161,12 @@ class DevicePairingView extends ConsumerWidget {
                           )
                         : Builder(
                             builder: (context) {
-                              final connectableDevices = scanState.devices
-                                  .where(
-                                    (e) =>
-                                        e.advertisementData.connectable == true,
-                                  )
-                                  .toList();
+                              final connectableDevices = scanState.devices;
+                              //     .where(
+                              //       (e) =>
+                              //           e.advertisementData.connectable == true,
+                              //     )
+                              //     .toList();
 
                               final itemCount = connectableDevices.length;
 
@@ -163,17 +174,13 @@ class DevicePairingView extends ConsumerWidget {
                                 children: List.generate(
                                   itemCount,
                                   (index) {
-                                    final device =
-                                        connectableDevices[index].device;
-                                    final deviceName =
-                                        device.platformName.isNotEmpty
-                                        ? device.platformName
-                                        : device.remoteId.str;
+                                    final scanResult =
+                                        connectableDevices[index];
+                                    final device = scanResult.device;
 
                                     return Column(
                                       children: [
                                         _DeviceListItem(
-                                          name: deviceName,
                                           device: device,
                                         ),
                                         if (index < itemCount - 1)
@@ -202,28 +209,46 @@ class DevicePairingView extends ConsumerWidget {
 }
 
 class _DeviceListItem extends ConsumerWidget {
-  const _DeviceListItem({required this.name, required this.device});
-  final String name;
+  const _DeviceListItem({required this.device});
   final BluetoothDevice device;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scanState = ref.watch(bluetoothScanProvider);
     final isConnecting = scanState.status == BluetoothScanStatus.connecting;
+    final deviceName = device.platformName.isEmpty
+        ? 'Unknown Device'
+        : device.platformName;
 
+    final deviceId = device.remoteId.str.isEmpty
+        ? 'Unknown Device'
+        : device.remoteId.str;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20).r,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(
-              name,
-              style: TextStyle(
-                fontSize: 16.spMin,
-                fontWeight: FontWeight.w400,
-              ),
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  deviceName,
+                  style: TextStyle(
+                    fontSize: 16.spMin,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  deviceId,
+                  style: TextStyle(
+                    fontSize: 16.spMin,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
           SizedBox(
@@ -232,7 +257,7 @@ class _DeviceListItem extends ConsumerWidget {
             child: ElevatedButton(
               onPressed: isConnecting
                   ? null
-                  : () => _showConnectDialog(context, ref, name, device),
+                  : () => _showConnectDialog(context, ref, device),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2B5C7F),
                 disabledBackgroundColor: Colors.grey,
@@ -260,9 +285,12 @@ class _DeviceListItem extends ConsumerWidget {
   void _showConnectDialog(
     BuildContext context,
     WidgetRef ref,
-    String deviceName,
     BluetoothDevice device,
   ) {
+    final deviceName = device.platformName.isEmpty
+        ? 'Unknown Device'
+        : device.platformName;
+
     showSizeSheet(
       context,
       Padding(
