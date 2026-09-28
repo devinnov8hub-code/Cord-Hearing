@@ -55,11 +55,15 @@ class OnboardingImageCollage extends StatelessWidget {
                   child: Column(
                     children: [
                       Expanded(
-                        child: _ImageCard(imageUrl: AppAssets.onboardingGrid(5)),
+                        child: _ImageCard(
+                          imageUrl: AppAssets.onboardingGrid(5),
+                        ),
                       ),
                       4.verticalSpace,
                       Expanded(
-                        child: _ImageCard(imageUrl: AppAssets.onboardingGrid(6)),
+                        child: _ImageCard(
+                          imageUrl: AppAssets.onboardingGrid(6),
+                        ),
                       ),
                     ],
                   ),

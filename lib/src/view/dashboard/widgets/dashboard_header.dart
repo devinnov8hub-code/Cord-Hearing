@@ -31,7 +31,9 @@ class DashboardHeader extends StatelessWidget {
         GestureDetector(
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (context) => const ProfileView()),
+              MaterialPageRoute<void>(
+                builder: (context) => const ProfileView(),
+              ),
             );
           },
           child: const Icon(

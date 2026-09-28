@@ -112,6 +112,7 @@ class BleDeviceRepository implements DeviceRepository {
   @override
   Future<void> setVolume(int step) async {
     if (_connectedDevice == null) return;
+
     // TODO(cord): Write step value to the specific volume GATT characteristic
   }
 
