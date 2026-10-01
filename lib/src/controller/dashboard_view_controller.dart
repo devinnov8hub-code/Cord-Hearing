@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:cord_hearing/src/core/services/device_repository.dart';
+import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

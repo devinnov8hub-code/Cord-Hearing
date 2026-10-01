@@ -1,6 +1,6 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
-import 'package:cord_hearing/src/core/services/device_repository.dart';
+import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';

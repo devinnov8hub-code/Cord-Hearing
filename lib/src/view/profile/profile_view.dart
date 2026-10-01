@@ -1,5 +1,5 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
-import 'package:cord_hearing/src/core/services/device_repository.dart';
+import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
 import 'package:cord_hearing/src/view/profile/widgets/disconnect_bottom_sheet.dart';

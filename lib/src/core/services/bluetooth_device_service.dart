@@ -8,12 +8,12 @@ import 'package:permission_handler/permission_handler.dart';
 enum MicMode { normal, directional, omni, noiseReduction }
 
 /// Provider for the DeviceRepository.
-/// You can easily swap [BleDeviceRepository] with MockDeviceRepository for UI testing.
-final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
-  return BleDeviceRepository();
+/// You can easily swap [BluetoothDeviceService] with MockDeviceRepository for UI testing.
+final deviceRepositoryProvider = Provider<BluetoothDeviceRepository>((ref) {
+  return BluetoothDeviceService();
 });
 
-abstract class DeviceRepository {
+abstract class BluetoothDeviceRepository {
   Stream<int> get batteryLevel;
   Stream<BluetoothConnectionState> get connectionState;
 
@@ -28,7 +28,7 @@ abstract class DeviceRepository {
   Future<void> requestStatus();
 }
 
-class BleDeviceRepository implements DeviceRepository {
+class BluetoothDeviceService implements BluetoothDeviceRepository {
   BluetoothDevice? _connectedDevice;
   StreamSubscription<BluetoothConnectionState>? _connectionStateSubscription;
 

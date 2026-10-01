@@ -1,6 +1,6 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
-import 'package:cord_hearing/src/core/services/device_repository.dart';
+import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/dashboard_header.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/device_status_card.dart';
