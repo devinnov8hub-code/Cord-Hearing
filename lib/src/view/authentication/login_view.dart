@@ -1,3 +1,4 @@
+import 'package:cord_hearing/src/controller/login_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
@@ -6,6 +7,7 @@ import 'package:cord_hearing/src/core/widgets/onboarding_image_collage.dart';
 import 'package:cord_hearing/src/view/authentication/create_account_view.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -63,11 +65,55 @@ class LoginView extends StatelessWidget {
   }
 }
 
-class _LoginContent extends StatelessWidget {
+class _LoginContent extends ConsumerStatefulWidget {
   const _LoginContent();
 
   @override
+  ConsumerState<_LoginContent> createState() => _LoginContentState();
+}
+
+class _LoginContentState extends ConsumerState<_LoginContent> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password.')),
+      );
+      return;
+    }
+
+    final success = await ref.read(loginViewControllerProvider.notifier).login(email, password);
+
+    if (!success && mounted) {
+      final error = ref.read(loginViewControllerProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error?.toString() ?? 'Login failed')),
+      );
+    } else if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login successful')),
+      );
+      // Navigate to Dashboard or home here if needed
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final loginState = ref.watch(loginViewControllerProvider);
+    final isLoading = loginState.isLoading;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -97,7 +143,7 @@ class _LoginContent extends StatelessWidget {
             ),
             16.verticalSpace,
             Text(
-              'Enter your email to receive a secure OTP and\nsign in to your Cord account.',
+              'Enter your email and password to\nsign in to your Cord account.',
               textAlign: TextAlign.left,
               style: TextStyle(
                 fontSize: 16.spMin,
@@ -109,18 +155,35 @@ class _LoginContent extends StatelessWidget {
             ),
           ],
         ),
-        const AppTextField(
-          title: 'Enter your email',
-          hintText: 'e.g User@Gmail.com',
-          prefixWidget: Icon(Icons.mail_outline_rounded, color: Colors.grey),
-          textInputType: TextInputType.emailAddress,
+        Column(
+          children: [
+            AppTextField(
+              controller: _emailController,
+              title: 'Enter your email',
+              hintText: 'e.g User@Gmail.com',
+              prefixWidget: const Icon(Icons.mail_outline_rounded, color: Colors.grey),
+              textInputType: TextInputType.emailAddress,
+            ),
+            16.verticalSpace,
+            AppTextField(
+              controller: _passwordController,
+              title: 'Enter your password',
+              hintText: '********',
+              prefixWidget: const Icon(Icons.lock_outline_rounded, color: Colors.grey),
+              textInputType: TextInputType.visiblePassword,
+              isPassword: true,
+            ),
+          ],
         ),
         Column(
           children: [
-            AppButton(
-              text: 'Continue',
-              onPressed: () {},
-            ),
+            if (isLoading)
+              const CircularProgressIndicator()
+            else
+              AppButton(
+                text: 'Continue',
+                onPressed: _login,
+              ),
             24.verticalSpace,
             RichText(
               text: TextSpan(

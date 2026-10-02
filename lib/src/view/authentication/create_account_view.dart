@@ -1,3 +1,4 @@
+import 'package:cord_hearing/src/controller/create_account_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
@@ -6,6 +7,7 @@ import 'package:cord_hearing/src/core/widgets/onboarding_image_collage.dart';
 import 'package:cord_hearing/src/view/authentication/login_view.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -63,11 +65,63 @@ class CreateAccountView extends StatelessWidget {
   }
 }
 
-class _CreateAccountContent extends StatelessWidget {
+class _CreateAccountContent extends ConsumerStatefulWidget {
   const _CreateAccountContent();
 
   @override
+  ConsumerState<_CreateAccountContent> createState() =>
+      _CreateAccountContentState();
+}
+
+class _CreateAccountContentState extends ConsumerState<_CreateAccountContent> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _signUp() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password.')),
+      );
+      return;
+    }
+
+    final success = await ref
+        .read(createAccountViewControllerProvider.notifier)
+        .signUp(email, password);
+
+    if (!success && mounted) {
+      final error = ref.read(createAccountViewControllerProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error?.toString() ?? 'Sign up failed')),
+      );
+    } else if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully')),
+      );
+      await Navigator.pushReplacement(
+        context,
+        MaterialPageRoute<void>(
+          builder: (context) => const LoginView(),
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(createAccountViewControllerProvider);
+    final isLoading = authState.isLoading;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -97,7 +151,7 @@ class _CreateAccountContent extends StatelessWidget {
             ),
             16.verticalSpace,
             Text(
-              "Enter your email below. We'll send a verification\ncode to confirm your account.",
+              'Enter your email and password below\nto create your account.',
               style: TextStyle(
                 fontSize: 16.spMin,
                 fontWeight: FontWeight.w400,
@@ -108,19 +162,41 @@ class _CreateAccountContent extends StatelessWidget {
             ),
           ],
         ),
-        const AppTextField(
-          title: 'Enter your email',
-          hintText: 'e.g User@Gmail.com',
-          prefixWidget: Icon(Icons.mail_outline_rounded, color: Colors.grey),
-          textInputType: TextInputType.emailAddress,
+        Column(
+          children: [
+            AppTextField(
+              controller: _emailController,
+              title: 'Enter your email',
+              hintText: 'e.g User@Gmail.com',
+              prefixWidget: const Icon(
+                Icons.mail_outline_rounded,
+                color: Colors.grey,
+              ),
+              textInputType: TextInputType.emailAddress,
+            ),
+            16.verticalSpace,
+            AppTextField(
+              controller: _passwordController,
+              title: 'Enter your password',
+              hintText: '********',
+              prefixWidget: const Icon(
+                Icons.lock_outline_rounded,
+                color: Colors.grey,
+              ),
+              textInputType: TextInputType.visiblePassword,
+              isPassword: true,
+            ),
+          ],
         ),
         Column(
           children: [
-            AppButton(
-              text: 'Continue',
-              // borderRadius: 30.r,
-              onPressed: () {},
-            ),
+            if (isLoading)
+              const CircularProgressIndicator()
+            else
+              AppButton(
+                text: 'Continue',
+                onPressed: _signUp,
+              ),
             24.verticalSpace,
             RichText(
               text: TextSpan(

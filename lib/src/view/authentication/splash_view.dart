@@ -1,6 +1,6 @@
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
-import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
+import 'package:cord_hearing/src/view/authentication/onboarding_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -26,7 +26,7 @@ class _SplashViewState extends State<SplashView> {
         // ignore: use_build_context_synchronously
         context,
         MaterialPageRoute<void>(
-          builder: (context) => const DevicePairingView(),
+          builder: (context) => const OnboardingView(),
         ),
       );
     });
