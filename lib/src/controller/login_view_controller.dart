@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:cord_hearing/src/core/services/firebase_auth_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final loginViewControllerProvider = AutoDisposeAsyncNotifierProvider<LoginViewController, void>(
-  LoginViewController.new,
-);
+final loginViewControllerProvider =
+    AutoDisposeAsyncNotifierProvider<LoginViewController, void>(
+      LoginViewController.new,
+    );
 
 class LoginViewController extends AutoDisposeAsyncNotifier<void> {
   @override

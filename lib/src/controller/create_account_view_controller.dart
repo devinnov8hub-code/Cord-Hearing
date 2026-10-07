@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:cord_hearing/src/core/services/firebase_auth_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final createAccountViewControllerProvider = AutoDisposeAsyncNotifierProvider<CreateAccountViewController, void>(
-  CreateAccountViewController.new,
-);
+final createAccountViewControllerProvider =
+    AutoDisposeAsyncNotifierProvider<CreateAccountViewController, void>(
+      CreateAccountViewController.new,
+    );
 
 class CreateAccountViewController extends AutoDisposeAsyncNotifier<void> {
   @override

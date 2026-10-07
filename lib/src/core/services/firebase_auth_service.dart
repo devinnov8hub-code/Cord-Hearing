@@ -18,7 +18,10 @@ class FirebaseAuthService {
 
   final FirebaseAuth _firebaseAuth;
 
-  Future<User?> signInWithEmailAndPassword(String email, String password) async {
+  Future<User?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
       final result = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
@@ -30,7 +33,10 @@ class FirebaseAuthService {
     }
   }
 
-  Future<User?> createUserWithEmailAndPassword(String email, String password) async {
+  Future<User?> createUserWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
       final result = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,

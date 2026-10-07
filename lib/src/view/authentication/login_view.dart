@@ -94,7 +94,9 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
       return;
     }
 
-    final success = await ref.read(loginViewControllerProvider.notifier).login(email, password);
+    final success = await ref
+        .read(loginViewControllerProvider.notifier)
+        .login(email, password);
 
     if (!success && mounted) {
       final error = ref.read(loginViewControllerProvider).error;
@@ -161,7 +163,10 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
               controller: _emailController,
               title: 'Enter your email',
               hintText: 'e.g User@Gmail.com',
-              prefixWidget: const Icon(Icons.mail_outline_rounded, color: Colors.grey),
+              prefixWidget: const Icon(
+                Icons.mail_outline_rounded,
+                color: Colors.grey,
+              ),
               textInputType: TextInputType.emailAddress,
             ),
             16.verticalSpace,
@@ -169,7 +174,10 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
               controller: _passwordController,
               title: 'Enter your password',
               hintText: '********',
-              prefixWidget: const Icon(Icons.lock_outline_rounded, color: Colors.grey),
+              prefixWidget: const Icon(
+                Icons.lock_outline_rounded,
+                color: Colors.grey,
+              ),
               textInputType: TextInputType.visiblePassword,
               isPassword: true,
             ),
