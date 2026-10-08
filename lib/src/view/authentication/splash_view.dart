@@ -1,6 +1,10 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/view/authentication/onboarding_view.dart';
+import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -22,13 +26,23 @@ class _SplashViewState extends State<SplashView> {
 
   Future<void> _navigateToDashBoard() async {
     await Future.delayed(const Duration(seconds: 1), () {
-      Navigator.pushReplacement(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute<void>(
-          builder: (context) => const OnboardingView(),
-        ),
-      );
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => const DevicePairingView(),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => const OnboardingView(),
+          ),
+        );
+      }
     });
   }
 

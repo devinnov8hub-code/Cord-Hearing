@@ -1,5 +1,6 @@
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/view/profile/profile_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,6 +10,10 @@ class DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email ?? '';
+    final displayName = email.isNotEmpty ? email.split('@').first : 'Guest';
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -20,10 +25,10 @@ class DashboardHeader extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: AppColors.primaryColor,
             ),
-            children: const [
+            children: [
               TextSpan(
-                text: 'James',
-                style: TextStyle(color: Colors.black),
+                text: displayName,
+                style: const TextStyle(color: Colors.black),
               ),
             ],
           ),

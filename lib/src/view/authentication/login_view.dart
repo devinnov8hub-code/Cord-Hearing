@@ -1,10 +1,12 @@
 import 'package:cord_hearing/src/controller/login_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
+import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/app_textfield.dart';
 import 'package:cord_hearing/src/core/widgets/onboarding_image_collage.dart';
 import 'package:cord_hearing/src/view/authentication/create_account_view.dart';
+import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -88,9 +90,7 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password.')),
-      );
+      Toasts.showError('Please enter both email and password.');
       return;
     }
 
@@ -100,14 +100,15 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
 
     if (!success && mounted) {
       final error = ref.read(loginViewControllerProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error?.toString() ?? 'Login failed')),
-      );
+      Toasts.showError(error?.toString() ?? 'Login failed');
     } else if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful')),
+      Toasts.showSuccess('Login successful');
+      await Navigator.pushReplacement(
+        context,
+        MaterialPageRoute<void>(
+          builder: (context) => const DevicePairingView(),
+        ),
       );
-      // Navigate to Dashboard or home here if needed
     }
   }
 

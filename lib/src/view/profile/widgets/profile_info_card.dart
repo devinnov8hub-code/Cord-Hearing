@@ -1,4 +1,5 @@
 import 'package:cord_hearing/src/core/app_colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,6 +10,10 @@ class ProfileInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email ?? 'Guest@email.com';
+    final displayName = email.isNotEmpty && email.contains('@') ? email.split('@').first : 'Guest';
+
     return Container(
       padding: const EdgeInsets.all(20).r,
       decoration: BoxDecoration(
@@ -58,12 +63,12 @@ class ProfileInfoCard extends StatelessWidget {
           24.verticalSpace,
           _buildInfoField(
             icon: CupertinoIcons.person,
-            value: 'James Chiwetalagwu',
+            value: displayName,
           ),
           16.verticalSpace,
           _buildInfoField(
             icon: CupertinoIcons.mail,
-            value: 'James@email.com',
+            value: email,
             textColor: Colors.grey[600],
           ),
           16.verticalSpace,

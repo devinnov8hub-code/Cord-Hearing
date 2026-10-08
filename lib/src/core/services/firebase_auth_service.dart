@@ -24,7 +24,7 @@ class FirebaseAuthService {
   ) async {
     try {
       final result = await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
+        email: email.toLowerCase(),
         password: password,
       );
       return result.user;
@@ -39,7 +39,7 @@ class FirebaseAuthService {
   ) async {
     try {
       final result = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
+        email: email.toLowerCase(),
         password: password,
       );
       return result.user;

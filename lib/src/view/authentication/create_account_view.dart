@@ -3,6 +3,7 @@ import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/app_textfield.dart';
+import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/core/widgets/onboarding_image_collage.dart';
 import 'package:cord_hearing/src/view/authentication/login_view.dart';
 import 'package:flutter/gestures.dart';
@@ -89,9 +90,7 @@ class _CreateAccountContentState extends ConsumerState<_CreateAccountContent> {
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password.')),
-      );
+      Toasts.showError('Please enter both email and password.');
       return;
     }
 
@@ -101,13 +100,9 @@ class _CreateAccountContentState extends ConsumerState<_CreateAccountContent> {
 
     if (!success && mounted) {
       final error = ref.read(createAccountViewControllerProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error?.toString() ?? 'Sign up failed')),
-      );
+      Toasts.showError(error?.toString() ?? 'Sign up failed');
     } else if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created successfully')),
-      );
+      Toasts.showSuccess('Account created successfully');
       await Navigator.pushReplacement(
         context,
         MaterialPageRoute<void>(

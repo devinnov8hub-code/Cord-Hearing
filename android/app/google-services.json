@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "118568777307",
+    "project_id": "cord-hearing-mobile",
+    "storage_bucket": "cord-hearing-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:118568777307:android:684067e19e712c48cbb17e",
+        "android_client_info": {
+          "package_name": "com.cordhearingaid.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIJkqtSfBg4nMJXpn7ZyngeVsmt5q6QO8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,4 @@
-package com.example.cord_hearing
+package com.cordhearingaid.app
 
 import io.flutter.embedding.android.FlutterActivity
 
