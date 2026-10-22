@@ -85,6 +85,7 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     await _connectionStateSubscription?.cancel();
     _connectionStateSubscription = device.connectionState.listen((state) {
       _connectionStateController.add(state);
+
       if (state == BluetoothConnectionState.disconnected) {
         _connectedDevice = null;
       }

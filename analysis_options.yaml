@@ -20,3 +20,8 @@ analyzer:
       implementation_imports: ignore
       type_annotate_public_apis: ignore
       use_setters_to_change_properties: false
+    exclude:
+        - build/**
+        - android/**
+        - ios/**
+        - web/**
