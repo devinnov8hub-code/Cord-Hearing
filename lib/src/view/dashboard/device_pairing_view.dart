@@ -66,7 +66,7 @@ class DevicePairingView extends ConsumerWidget {
                     ),
                   ),
                 ),
-                32.verticalSpace,
+                24.verticalSpace,
                 Text(
                   'Make sure your hearing device is turned on and Bluetooth is enabled on your phone. Keep your device close to your phone while we search for and connect to it.',
                   textAlign: TextAlign.left,
@@ -75,10 +75,9 @@ class DevicePairingView extends ConsumerWidget {
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF666666),
                     height: 1.5,
-                    letterSpacing: 0,
                   ),
                 ),
-                32.verticalSpace,
+                24.verticalSpace,
                 Center(
                   child: SizedBox(
                     width: 200.w,
@@ -126,18 +125,83 @@ class DevicePairingView extends ConsumerWidget {
                 ),
                 if (scanState.errorMessage != null) ...[
                   16.verticalSpace,
-                  Center(
-                    child: Text(
-                      scanState.errorMessage!,
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 14.spMin,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14).r,
+                    decoration: BoxDecoration(
+                      color: scanState.requiresPairingMode
+                          ? Colors.amber.withValues(alpha: 0.15)
+                          : Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: scanState.requiresPairingMode
+                            ? Colors.amber[800]!
+                            : Colors.red,
                       ),
-                      textAlign: TextAlign.center,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          scanState.requiresPairingMode
+                              ? Icons.bluetooth_searching
+                              : Icons.error_outline,
+                          color: scanState.requiresPairingMode
+                              ? Colors.amber[900]
+                              : Colors.red,
+                          size: 20.spMin,
+                        ),
+                        8.horizontalSpace,
+                        Expanded(
+                          child: Text(
+                            scanState.errorMessage!,
+                            style: TextStyle(
+                              color: scanState.requiresPairingMode
+                                  ? Colors.amber[900]
+                                  : Colors.red,
+                              fontSize: 13.spMin,
+                              fontWeight: FontWeight.w500,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-                48.verticalSpace,
+                // System Connected Devices Section
+                if (scanState.systemDevices.isNotEmpty) ...[
+                  32.verticalSpace,
+                  Text(
+                    'Connected to Phone (Hearing Aid / Audio)',
+                    style: TextStyle(
+                      fontSize: 16.spMin,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  12.verticalSpace,
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F7FF),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(color: const Color(0xFFB9DCF7)),
+                    ),
+                    child: Column(
+                      children: List.generate(
+                        scanState.systemDevices.length,
+                        (index) {
+                          final device = scanState.systemDevices[index];
+                          return _DeviceListItem(
+                            device: device,
+                            isSystemDevice: true,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+                32.verticalSpace,
                 Text(
                   isScanning
                       ? 'Looking for available devices'
@@ -157,12 +221,13 @@ class DevicePairingView extends ConsumerWidget {
                     ),
                     child:
                         scanState.devices.isEmpty &&
-                            scanState.status == BluetoothScanStatus.scanned
+                            scanState.status == BluetoothScanStatus.scanned &&
+                            scanState.systemDevices.isEmpty
                         ? Padding(
                             padding: const EdgeInsets.all(24).r,
                             child: Center(
                               child: Text(
-                                'No devices found',
+                                'No CHORD devices found',
                                 style: TextStyle(
                                   color: Colors.grey,
                                   fontSize: 14.spMin,
@@ -173,12 +238,6 @@ class DevicePairingView extends ConsumerWidget {
                         : Builder(
                             builder: (context) {
                               final connectableDevices = scanState.devices;
-                              //     .where(
-                              //       (e) =>
-                              //           e.advertisementData.connectable == true,
-                              //     )
-                              //     .toList();
-
                               final itemCount = connectableDevices.length;
 
                               return Column(
@@ -193,6 +252,7 @@ class DevicePairingView extends ConsumerWidget {
                                       children: [
                                         _DeviceListItem(
                                           device: device,
+                                          rssi: scanResult.rssi,
                                         ),
                                         if (index < itemCount - 1)
                                           Divider(
@@ -220,22 +280,32 @@ class DevicePairingView extends ConsumerWidget {
 }
 
 class _DeviceListItem extends ConsumerWidget {
-  const _DeviceListItem({required this.device});
+  const _DeviceListItem({
+    required this.device,
+    this.isSystemDevice = false,
+    this.rssi,
+  });
+
   final BluetoothDevice device;
+  final bool isSystemDevice;
+  final int? rssi;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scanState = ref.watch(bluetoothScanProvider);
     final isConnecting = scanState.status == BluetoothScanStatus.connecting;
-    final deviceName = device.platformName.isEmpty
-        ? 'Unknown Device'
-        : device.platformName;
+
+    var name = device.platformName;
+    if (name.isEmpty) {
+      name = 'CHORD Body Unit';
+    }
 
     final deviceId = device.remoteId.str.isEmpty
-        ? 'Unknown Device'
+        ? 'Unknown ID'
         : device.remoteId.str;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20).r,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16).r,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -243,21 +313,64 @@ class _DeviceListItem extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  deviceName,
-                  style: TextStyle(
-                    fontSize: 16.spMin,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 16.spMin,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (isSystemDevice) ...[
+                      6.horizontalSpace,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ).r,
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFF2BA9E0,
+                          ).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Text(
+                          'Paired',
+                          style: TextStyle(
+                            fontSize: 10.spMin,
+                            color: const Color(0xFF2BA9E0),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                Text(
-                  deviceId,
-                  style: TextStyle(
-                    fontSize: 16.spMin,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                4.verticalSpace,
+                Row(
+                  children: [
+                    Text(
+                      deviceId,
+                      style: TextStyle(
+                        fontSize: 13.spMin,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w400,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (rssi != null) ...[
+                      8.horizontalSpace,
+                      Text(
+                        '${rssi}dBm',
+                        style: TextStyle(
+                          fontSize: 11.spMin,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -298,9 +411,10 @@ class _DeviceListItem extends ConsumerWidget {
     WidgetRef ref,
     BluetoothDevice device,
   ) {
-    final deviceName = device.platformName.isEmpty
-        ? 'Unknown Device'
-        : device.platformName;
+    var deviceName = device.platformName;
+    if (deviceName.isEmpty) {
+      deviceName = 'CHORD Hearing Unit';
+    }
 
     showSizeSheet(
       context,
@@ -317,14 +431,13 @@ class _DeviceListItem extends ConsumerWidget {
                   fontSize: 20.spMin,
                   fontWeight: FontWeight.w600,
                   color: Colors.black,
-                  fontFamily:
-                      'Inter', // Defaulting to the standard font style if any
+                  fontFamily: 'Inter',
                 ),
                 children: [
                   TextSpan(
                     text: deviceName,
                     style: const TextStyle(
-                      color: Color(0xFF2BA9E0), // AppColors.primaryColor
+                      color: Color(0xFF2BA9E0),
                     ),
                   ),
                 ],
@@ -332,7 +445,7 @@ class _DeviceListItem extends ConsumerWidget {
             ),
             16.verticalSpace,
             Text(
-              'Before connecting, please check that the Device ID\nshown above matches the ID on your hearing device\nor its packaging.',
+              "Before connecting, ensure your CHORD unit is turned on. If this phone hasn't paired before, hold VOL+ and VOL− together for 3 seconds on the unit.",
               style: TextStyle(
                 fontSize: 14.spMin,
                 color: const Color(0xFF666666),

@@ -1,6 +1,6 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
-import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -42,87 +42,85 @@ class MicrophoneModeCard extends ConsumerWidget {
           ),
           16.verticalSpace,
           Container(
-            height: 80.h,
+            padding: const EdgeInsets.all(4).r,
             decoration: BoxDecoration(
-              color: Colors.grey[600],
+              color: Colors.grey[300],
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: Row(
               children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => controller.setMicMode(MicMode.omni),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: state.micMode == MicMode.omni
-                            ? AppColors.primaryColor
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.mic_none,
-                            color: state.micMode == MicMode.omni
-                                ? Colors.white
-                                : Colors.white70,
-                            size: 28.spMin,
-                          ),
-                          8.verticalSpace,
-                          Text(
-                            'Omnidirectional',
-                            style: TextStyle(
-                              color: state.micMode == MicMode.omni
-                                  ? Colors.white
-                                  : Colors.white70,
-                              fontSize: 12.spMin,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                _buildModeOption(
+                  label: 'Omni',
+                  icon: Icons.mic_none,
+                  isSelected: state.micMode == ChordMicMode.omni,
+                  onTap: () => controller.setMicMode(ChordMicMode.omni),
                 ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => controller.setMicMode(MicMode.directional),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: state.micMode == MicMode.directional
-                            ? AppColors.primaryColor
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.mic,
-                            color: state.micMode == MicMode.directional
-                                ? Colors.white
-                                : Colors.white70,
-                            size: 28.spMin,
-                          ),
-                          8.verticalSpace,
-                          Text(
-                            'Unidirectional',
-                            style: TextStyle(
-                              color: state.micMode == MicMode.directional
-                                  ? Colors.white
-                                  : Colors.white70,
-                              fontSize: 12.spMin,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                _buildModeOption(
+                  label: 'Directional',
+                  icon: Icons.mic,
+                  isSelected: state.micMode == ChordMicMode.directional,
+                  onTap: () => controller.setMicMode(ChordMicMode.directional),
+                ),
+                _buildModeOption(
+                  label: 'Bypass',
+                  icon: Icons.hearing,
+                  isSelected: state.micMode == ChordMicMode.bypass,
+                  onTap: () => controller.setMicMode(ChordMicMode.bypass),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildModeOption({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12).r,
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.primaryColor.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : Colors.black87,
+                size: 22.spMin,
+              ),
+              6.verticalSpace,
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontSize: 12.spMin,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

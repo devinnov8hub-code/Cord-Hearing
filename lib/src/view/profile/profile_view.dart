@@ -2,6 +2,7 @@ import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
+import 'package:cord_hearing/src/view/profile/widgets/device_actions_card.dart';
 import 'package:cord_hearing/src/view/profile/widgets/disconnect_bottom_sheet.dart';
 import 'package:cord_hearing/src/view/profile/widgets/previously_paired_list.dart';
 import 'package:cord_hearing/src/view/profile/widgets/profile_info_card.dart';
@@ -39,7 +40,7 @@ class ProfileView extends ConsumerWidget {
           ),
         ),
         title: Text(
-          'Profile',
+          'Profile & Settings',
           style: TextStyle(
             color: Colors.black,
             fontSize: 18.spMin,
@@ -55,6 +56,8 @@ class ProfileView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ProfileInfoCard(deviceName: state.deviceName),
+              24.verticalSpace,
+              const DeviceActionsCard(),
               24.verticalSpace,
               AppButton(
                 text: 'Disconnect device',

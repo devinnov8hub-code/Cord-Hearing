@@ -23,18 +23,57 @@ class VolumeLevelCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                Icons.volume_up,
-                color: Colors.grey[700],
-                size: 20.spMin,
+              Row(
+                children: [
+                  Icon(
+                    state.isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: state.isMuted ? Colors.red : Colors.grey[700],
+                    size: 20.spMin,
+                  ),
+                  8.horizontalSpace,
+                  Text(
+                    'Volume level (4 dB/step)',
+                    style: TextStyle(
+                      fontSize: 14.spMin,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-              8.horizontalSpace,
-              Text(
-                'Volume level',
-                style: TextStyle(
-                  fontSize: 14.spMin,
-                  fontWeight: FontWeight.w500,
+              GestureDetector(
+                onTap: controller.toggleMute,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4).r,
+                  decoration: BoxDecoration(
+                    color: state.isMuted
+                        ? Colors.red.withValues(alpha: 0.15)
+                        : Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: state.isMuted ? Colors.red : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        state.isMuted ? Icons.volume_off : Icons.volume_up,
+                        size: 14.spMin,
+                        color: state.isMuted ? Colors.red : Colors.black87,
+                      ),
+                      4.horizontalSpace,
+                      Text(
+                        state.isMuted ? 'Muted' : 'Mute',
+                        style: TextStyle(
+                          fontSize: 12.spMin,
+                          fontWeight: FontWeight.w600,
+                          color: state.isMuted ? Colors.red : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -44,9 +83,13 @@ class VolumeLevelCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                onTap: () => controller.setVolume(state.volume - 1),
+                onTap: state.volume > 1
+                    ? () => controller.setVolume(state.volume - 1)
+                    : null,
                 child: CircleAvatar(
-                  backgroundColor: AppColors.primaryColor,
+                  backgroundColor: state.volume > 1
+                      ? AppColors.primaryColor
+                      : Colors.grey.withValues(alpha: 0.3),
                   radius: 20.r,
                   child: const Icon(
                     Icons.remove,
@@ -70,9 +113,11 @@ class VolumeLevelCard extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      state.volume.toString().padLeft(2, '0'),
+                      state.isMuted ? 'MUT' : state.volume.toString().padLeft(2, '0'),
                       style: TextStyle(
-                        color: AppColors.primaryColor,
+                        color: state.isMuted
+                            ? Colors.red
+                            : AppColors.primaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 14.spMin,
                       ),
@@ -80,6 +125,8 @@ class VolumeLevelCard extends ConsumerWidget {
                     16.horizontalSpace,
                     Row(
                       children: List.generate(10, (index) {
+                        final stepNumber = index + 1;
+                        final isActive = !state.isMuted && stepNumber <= state.volume;
                         return Container(
                           width: 4.w,
                           height: 16.h,
@@ -87,9 +134,11 @@ class VolumeLevelCard extends ConsumerWidget {
                             right: index < 9 ? 4.w : 0,
                           ),
                           decoration: BoxDecoration(
-                            color: index < state.volume
+                            color: isActive
                                 ? AppColors.primaryColor
-                                : Colors.grey.withValues(alpha: 0.3),
+                                : (state.isMuted && stepNumber <= state.volume)
+                                    ? Colors.red.withValues(alpha: 0.4)
+                                    : Colors.grey.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(2.r),
                           ),
                         );
@@ -99,9 +148,13 @@ class VolumeLevelCard extends ConsumerWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () => controller.setVolume(state.volume + 1),
+                onTap: state.volume < 10
+                    ? () => controller.setVolume(state.volume + 1)
+                    : null,
                 child: CircleAvatar(
-                  backgroundColor: AppColors.primaryColor,
+                  backgroundColor: state.volume < 10
+                      ? AppColors.primaryColor
+                      : Colors.grey.withValues(alpha: 0.3),
                   radius: 20.r,
                   child: const Icon(Icons.add, color: Colors.white),
                 ),
