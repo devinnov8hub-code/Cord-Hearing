@@ -49,14 +49,19 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   @override
   Future<bool> checkAndRequestPermissions() async {
     if (Platform.isAndroid) {
+      // Android 12+ (API 31+) needs BLUETOOTH_SCAN + BLUETOOTH_CONNECT.
+      // Android < 12 needs location for BLE scanning.
+      // We request both to cover all Android versions.
       final statuses = await [
         Permission.bluetoothScan,
         Permission.bluetoothConnect,
-
-        Permission.location,
+        Permission.locationWhenInUse, // Replaces deprecated Permission.location
       ].request();
 
-      return statuses.values.every((status) => status.isGranted);
+      // Accept both 'granted' and 'limited' as valid
+      return statuses.values.every(
+        (status) => status.isGranted || status.isLimited,
+      );
     }
     // On iOS, CoreBluetooth automatically requests permissions when you try to use Bluetooth.
     return true;

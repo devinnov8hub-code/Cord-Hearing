@@ -53,12 +53,12 @@ const List<_OnboardingData> _onboardingPages = [
   _OnboardingData(
     title: 'Chord Hearing Aid',
     subtitle:
-        'Simple control for a better listening experience.\nPair your device, adjust settings, and stay\nconnected.',
+        'Simple control for a better listening experience.Pair your device, adjust settings, and stay connected.',
   ),
   _OnboardingData(
     title: 'Personalized Sound',
     subtitle:
-        'Your hearing, personalized. Manage your Cord\ndevice and fine-tune your experience from one\nsimple app.',
+        'Your hearing, personalized. Manage your Cord device and fine-tune your experience from one simple app.',
   ),
 ];
 
@@ -109,7 +109,7 @@ class _OnboardingContentState extends State<_OnboardingContent> {
         ),
 
         SizedBox(
-          height: MediaQuery.of(context).size.height * 0.12,
+          height: (MediaQuery.of(context).size.height * 0.12),
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (index) {
@@ -120,21 +120,16 @@ class _OnboardingContentState extends State<_OnboardingContent> {
             itemCount: _onboardingPages.length,
             itemBuilder: (context, index) {
               final page = _onboardingPages[index];
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    page.subtitle,
-                    textAlign: TextAlign.left,
-                    style: TextStyle(
-                      fontSize: 16.spMin,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF666666),
-                      height: 1.5,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
+              return Text(
+                page.subtitle,
+                textAlign: TextAlign.left,
+                style: TextStyle(
+                  fontSize: 16.spMin,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF666666),
+                  // height: 1.5,
+                  letterSpacing: 0,
+                ),
               );
             },
           ),

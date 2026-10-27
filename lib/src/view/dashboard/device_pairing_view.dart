@@ -68,7 +68,7 @@ class DevicePairingView extends ConsumerWidget {
                 ),
                 32.verticalSpace,
                 Text(
-                  'Make sure your hearing device is turned on and\nBluetooth is enabled on your phone. Keep your device\nclose to your phone while we search for and connect\nto it.',
+                  'Make sure your hearing device is turned on and Bluetooth is enabled on your phone. Keep your device close to your phone while we search for and connect to it.',
                   textAlign: TextAlign.left,
                   style: TextStyle(
                     fontSize: 14.spMin,
@@ -262,9 +262,9 @@ class _DeviceListItem extends ConsumerWidget {
               ],
             ),
           ),
-          SizedBox(
-            height: 36.h,
-            width: 100.w,
+          FittedBox(
+            // height: 36.h,
+            // width: 100.w,
             child: ElevatedButton(
               onPressed: isConnecting
                   ? null

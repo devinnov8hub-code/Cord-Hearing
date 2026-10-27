@@ -7,6 +7,7 @@ import 'package:cord_hearing/src/core/widgets/app_textfield.dart';
 import 'package:cord_hearing/src/core/widgets/onboarding_image_collage.dart';
 import 'package:cord_hearing/src/view/authentication/create_account_view.dart';
 import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,8 +76,12 @@ class _LoginContent extends ConsumerStatefulWidget {
 }
 
 class _LoginContentState extends ConsumerState<_LoginContent> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController(
+    text: kDebugMode ? 'mubarakshuaib3@gmail.com' : '',
+  );
+  final _passwordController = TextEditingController(
+    text: kDebugMode ? '55555@Kk' : '',
+  );
 
   @override
   void dispose() {
