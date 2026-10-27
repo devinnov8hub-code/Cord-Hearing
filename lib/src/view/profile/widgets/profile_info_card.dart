@@ -12,7 +12,9 @@ class ProfileInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email ?? 'Guest@email.com';
-    final displayName = email.isNotEmpty && email.contains('@') ? email.split('@').first : 'Guest';
+    final displayName = email.isNotEmpty && email.contains('@')
+        ? email.split('@').first
+        : 'Guest';
 
     return Container(
       padding: const EdgeInsets.all(20).r,

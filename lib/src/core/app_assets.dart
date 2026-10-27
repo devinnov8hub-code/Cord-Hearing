@@ -11,6 +11,7 @@ class AppAssets {
       '$_basePath/battery_status_charging.svg';
   static const String batteryStatusIdle = '$_basePath/battery_status_idle.svg';
   static const String batteryStatusLow = '$_basePath/battery_status_low.svg';
+  static const String pulseAnimation = '$_basePath/pulse_animation.json';
 
   static String onboardingGrid(int val) =>
       '$_basePath/onboarding_grid_$val.png';

@@ -10,6 +10,7 @@ import 'package:cord_hearing/src/view/dashboard/widgets/volume_level_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:lottie/lottie.dart';
 
 class DashboardView extends ConsumerWidget {
   const DashboardView({super.key});
@@ -52,10 +53,22 @@ class DashboardView extends ConsumerWidget {
               const DashboardHeader(),
               16.verticalSpace,
               Center(
-                child: Image.asset(
-                  AppAssets.hearingAid,
-                  height: 268.h,
-                  fit: BoxFit.contain,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Lottie.asset(
+                      AppAssets.pulseAnimation,
+                      height: 280.h,
+                      repeat: true,
+                      animate: true,
+                      fit: BoxFit.cover,
+                    ),
+                    Image.asset(
+                      AppAssets.hearingAid,
+                      height: 168.h,
+                      fit: BoxFit.contain,
+                    ),
+                  ],
                 ),
               ),
               16.verticalSpace,

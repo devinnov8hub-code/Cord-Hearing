@@ -95,7 +95,8 @@ class DevicePairingViewController
 
     state = state.copyWith(status: BluetoothScanStatus.scanning, devices: []);
     try {
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
+      FlutterBluePlus.setLogLevel(LogLevel.verbose);
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
     } catch (e) {
       state = state.copyWith(
         status: BluetoothScanStatus.error,

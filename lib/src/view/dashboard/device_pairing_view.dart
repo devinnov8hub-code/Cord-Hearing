@@ -9,6 +9,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:lottie/lottie.dart';
 
 class DevicePairingView extends ConsumerWidget {
   const DevicePairingView({super.key});
@@ -49,9 +50,19 @@ class DevicePairingView extends ConsumerWidget {
                     );
                   },
                   child: Center(
-                    child: SvgPicture.asset(
-                      AppAssets.bluetoothScanning,
-                      height: 220.h,
+                    child: Stack(
+                      children: [
+                        Lottie.asset(
+                          AppAssets.pulseAnimation,
+                          height: 220.h,
+                          repeat: true,
+                          animate: true,
+                        ),
+                        SvgPicture.asset(
+                          AppAssets.bluetoothScanning,
+                          height: 220.h,
+                        ),
+                      ],
                     ),
                   ),
                 ),
