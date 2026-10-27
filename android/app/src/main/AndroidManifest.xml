@@ -10,7 +10,7 @@
     <uses-feature android:name="android.hardware.bluetooth" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
     <application
-        android:label="cord_hearing"
+        android:label="Cord Hearing"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

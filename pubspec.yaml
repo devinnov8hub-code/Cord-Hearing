@@ -35,7 +35,8 @@ dependencies:
   flutter_screenutil: ^5.9.3
   flutter_svg: ^2.3.0
   permission_handler: ^11.3.1
-  toastification: ^3.2.0
+  toastification: ^3.0.3
+  # toastification: ^3.2.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
