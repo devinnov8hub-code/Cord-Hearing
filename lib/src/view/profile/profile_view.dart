@@ -1,9 +1,13 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/core/services/firebase_auth_service.dart';
+import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
+import 'package:cord_hearing/src/view/authentication/login_view.dart';
 import 'package:cord_hearing/src/view/profile/widgets/device_actions_card.dart';
 import 'package:cord_hearing/src/view/profile/widgets/disconnect_bottom_sheet.dart';
+import 'package:cord_hearing/src/view/profile/widgets/logout_bottom_sheet.dart';
 import 'package:cord_hearing/src/view/profile/widgets/previously_paired_list.dart';
 import 'package:cord_hearing/src/view/profile/widgets/profile_info_card.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +16,32 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
+
+  void _showLogoutSheet(BuildContext context, WidgetRef ref) {
+    final repo = ref.read(deviceRepositoryProvider);
+    final authService = ref.read(authServiceProvider);
+
+    DialogSheet.showCustom(
+      context,
+      child: LogoutBottomSheet(
+        onCancel: () => Navigator.of(context).pop(),
+        onLogout: () async {
+          Navigator.of(context).pop(); // Close bottom sheet
+          await repo.disconnect();
+          await authService.signOut();
+          Toasts.showSuccess('Logged out successfully');
+          if (context.mounted) {
+            await Navigator.of(context).pushAndRemoveUntil<void>(
+              MaterialPageRoute<void>(
+                builder: (context) => const LoginView(),
+              ),
+              (route) => false,
+            );
+          }
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,6 +78,17 @@ class ProfileView extends ConsumerWidget {
           ),
         ),
         centerTitle: false,
+        actions: [
+          IconButton(
+            onPressed: () => _showLogoutSheet(context, ref),
+            tooltip: 'Log Out',
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Color(0xFFD32F2F),
+            ),
+          ),
+          8.horizontalSpace,
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -82,6 +123,20 @@ class ProfileView extends ConsumerWidget {
               ),
               32.verticalSpace,
               const PreviouslyPairedList(),
+              32.verticalSpace,
+              AppButton(
+                text: 'Log Out',
+                icon: const Icon(
+                  Icons.logout_rounded,
+                  color: Color(0xFFD32F2F),
+                ),
+                isOutlined: true,
+                outlineColor: const Color(0xFFD32F2F),
+                bgColor: Colors.white,
+                textColor: const Color(0xFFD32F2F),
+                borderRadius: 24.r,
+                onPressed: () => _showLogoutSheet(context, ref),
+              ),
               32.verticalSpace,
             ],
           ),
