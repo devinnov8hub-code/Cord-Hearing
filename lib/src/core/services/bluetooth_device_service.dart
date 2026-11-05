@@ -38,8 +38,10 @@ abstract class BluetoothDeviceRepository {
   Stream<ChordConnectionTelemetry> get connectionTelemetry;
   Stream<ChordAudioTransport> get audioTransport;
   Stream<ChordEarpieceState> get earpieceState;
+  Stream<ChordFaultCode> get faultCode;
   Stream<int> get otaProgress;
   Stream<String> get firmwareVersion;
+  Stream<String> get hardwareRevision;
   Stream<String> get manufacturerName;
   Stream<String> get modelNumber;
   Stream<MapEntry<int, ChordControlStatus>> get controlResponses;
@@ -50,9 +52,11 @@ abstract class BluetoothDeviceRepository {
   ChordProfile get currentProfile;
   ChordMicMode get currentMicMode;
   ChordEarpieceState get currentEarpieceState;
+  ChordFaultCode get currentFaultCode;
   ChordChargingStatus get currentChargingStatus;
   ChordAudioTransport get currentAudioTransport;
   String get currentFirmwareVersion;
+  String get currentHardwareRevision;
 
   /// Permissions & discovery
   Future<bool> checkAndRequestPermissions();
@@ -74,6 +78,7 @@ abstract class BluetoothDeviceRepository {
   Future<void> factoryReset();
   Future<void> forgetAllPhones();
   Future<void> powerOff();
+  Future<void> openPairingMode();
 
   /// Legacy/general status request
   Future<void> requestStatus();
@@ -102,8 +107,10 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
       StreamController<ChordAudioTransport>.broadcast();
   final _earpieceStateController =
       StreamController<ChordEarpieceState>.broadcast();
+  final _faultCodeController = StreamController<ChordFaultCode>.broadcast();
   final _otaProgressController = StreamController<int>.broadcast();
   final _firmwareVersionController = StreamController<String>.broadcast();
+  final _hardwareRevisionController = StreamController<String>.broadcast();
   final _manufacturerController = StreamController<String>.broadcast();
   final _modelController = StreamController<String>.broadcast();
   final _controlResponseController =
@@ -115,9 +122,11 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   ChordProfile _currentProfile = ChordProfile.normal;
   ChordMicMode _currentMicMode = ChordMicMode.omni;
   ChordEarpieceState _currentEarpieceState = ChordEarpieceState.ready;
+  ChordFaultCode _currentFaultCode = ChordFaultCode.none;
   ChordChargingStatus _currentChargingStatus = ChordChargingStatus.discharging;
   ChordAudioTransport _currentAudioTransport = ChordAudioTransport.none;
   String _currentFirmwareVersion = '';
+  String _currentHardwareRevision = '';
 
   // Cached characteristics for fast access
   BluetoothCharacteristic? _volumeChar;
@@ -157,9 +166,13 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   Stream<ChordEarpieceState> get earpieceState =>
       _earpieceStateController.stream;
   @override
+  Stream<ChordFaultCode> get faultCode => _faultCodeController.stream;
+  @override
   Stream<int> get otaProgress => _otaProgressController.stream;
   @override
   Stream<String> get firmwareVersion => _firmwareVersionController.stream;
+  @override
+  Stream<String> get hardwareRevision => _hardwareRevisionController.stream;
   @override
   Stream<String> get manufacturerName => _manufacturerController.stream;
   @override
@@ -179,11 +192,15 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   @override
   ChordEarpieceState get currentEarpieceState => _currentEarpieceState;
   @override
+  ChordFaultCode get currentFaultCode => _currentFaultCode;
+  @override
   ChordChargingStatus get currentChargingStatus => _currentChargingStatus;
   @override
   ChordAudioTransport get currentAudioTransport => _currentAudioTransport;
   @override
   String get currentFirmwareVersion => _currentFirmwareVersion;
+  @override
+  String get currentHardwareRevision => _currentHardwareRevision;
 
   @override
   Future<bool> checkAndRequestPermissions() async {
@@ -349,6 +366,20 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
                 _earpieceStateController.add(_currentEarpieceState);
               }
             });
+          } else if (c.uuid == ChordBleConstants.faultCodeCharacteristicUuid) {
+            await _subscribeToCharacteristic(c, (value) {
+              if (value.isNotEmpty) {
+                _currentFaultCode = ChordFaultCode.fromValue(value[0]);
+                _faultCodeController.add(_currentFaultCode);
+              }
+            });
+            try {
+              final val = await _safeReadWithRetry(c);
+              if (val.isNotEmpty) {
+                _currentFaultCode = ChordFaultCode.fromValue(val[0]);
+                _faultCodeController.add(_currentFaultCode);
+              }
+            } catch (_) {}
           } else if (c.uuid ==
               ChordBleConstants.otaProgressCharacteristicUuid) {
             await _subscribeToCharacteristic(c, (value) {
@@ -418,6 +449,16 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               final val = await _safeReadWithRetry(c);
               if (val.isNotEmpty) {
                 _modelController.add(utf8.decode(val, allowMalformed: true));
+              }
+            } catch (_) {}
+          } else if (c.uuid ==
+              ChordBleConstants.hardwareRevisionCharacteristicUuid) {
+            try {
+              final val = await _safeReadWithRetry(c);
+              if (val.isNotEmpty) {
+                _currentHardwareRevision =
+                    utf8.decode(val, allowMalformed: true);
+                _hardwareRevisionController.add(_currentHardwareRevision);
               }
             } catch (_) {}
           }
@@ -540,6 +581,10 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   Future<void> powerOff() async => _sendCommand(ChordOpcode.powerOff);
 
   @override
+  Future<void> openPairingMode() async =>
+      _sendCommand(ChordOpcode.openPairingMode);
+
+  @override
   Future<void> requestStatus() async => sync();
 
   void dispose() {
@@ -556,8 +601,10 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     _connectionTelemetryController.close();
     _audioTransportController.close();
     _earpieceStateController.close();
+    _faultCodeController.close();
     _otaProgressController.close();
     _firmwareVersionController.close();
+    _hardwareRevisionController.close();
     _manufacturerController.close();
     _modelController.close();
     _controlResponseController.close();

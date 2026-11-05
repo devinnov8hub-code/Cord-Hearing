@@ -12,11 +12,13 @@ class DashboardState {
     this.micMode = ChordMicMode.omni,
     this.profile = ChordProfile.normal,
     this.earpieceState = ChordEarpieceState.ready,
+    this.faultCode = ChordFaultCode.none,
     this.chargingStatus = ChordChargingStatus.discharging,
     this.audioTransport = ChordAudioTransport.none,
     this.deviceStatus = ChordDeviceStatus.ok,
     this.deviceName = 'Unknown Device',
     this.firmwareVersion = '',
+    this.hardwareRevision = '',
     this.manufacturer = '',
     this.model = '',
     this.isStreamingAudio = false,
@@ -30,11 +32,13 @@ class DashboardState {
   final ChordMicMode micMode;
   final ChordProfile profile;
   final ChordEarpieceState earpieceState;
+  final ChordFaultCode faultCode;
   final ChordChargingStatus chargingStatus;
   final ChordAudioTransport audioTransport;
   final ChordDeviceStatus deviceStatus;
   final String deviceName;
   final String firmwareVersion;
+  final String hardwareRevision;
   final String manufacturer;
   final String model;
   final bool isStreamingAudio;
@@ -48,11 +52,13 @@ class DashboardState {
     ChordMicMode? micMode,
     ChordProfile? profile,
     ChordEarpieceState? earpieceState,
+    ChordFaultCode? faultCode,
     ChordChargingStatus? chargingStatus,
     ChordAudioTransport? audioTransport,
     ChordDeviceStatus? deviceStatus,
     String? deviceName,
     String? firmwareVersion,
+    String? hardwareRevision,
     String? manufacturer,
     String? model,
     bool? isStreamingAudio,
@@ -67,11 +73,13 @@ class DashboardState {
       micMode: micMode ?? this.micMode,
       profile: profile ?? this.profile,
       earpieceState: earpieceState ?? this.earpieceState,
+      faultCode: faultCode ?? this.faultCode,
       chargingStatus: chargingStatus ?? this.chargingStatus,
       audioTransport: audioTransport ?? this.audioTransport,
       deviceStatus: deviceStatus ?? this.deviceStatus,
       deviceName: deviceName ?? this.deviceName,
       firmwareVersion: firmwareVersion ?? this.firmwareVersion,
+      hardwareRevision: hardwareRevision ?? this.hardwareRevision,
       manufacturer: manufacturer ?? this.manufacturer,
       model: model ?? this.model,
       isStreamingAudio: isStreamingAudio ?? this.isStreamingAudio,
@@ -127,6 +135,9 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       repo.earpieceState.listen((earpiece) {
         state = state.copyWith(earpieceState: earpiece);
       }),
+      repo.faultCode.listen((fault) {
+        state = state.copyWith(faultCode: fault);
+      }),
       repo.audioTransport.listen((transport) {
         state = state.copyWith(audioTransport: transport);
       }),
@@ -138,6 +149,9 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       }),
       repo.firmwareVersion.listen((version) {
         state = state.copyWith(firmwareVersion: version);
+      }),
+      repo.hardwareRevision.listen((hwRev) {
+        state = state.copyWith(hardwareRevision: hwRev);
       }),
       repo.manufacturerName.listen((mfg) {
         state = state.copyWith(manufacturer: mfg);
@@ -169,9 +183,11 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       profile: repo.currentProfile,
       micMode: repo.currentMicMode,
       earpieceState: repo.currentEarpieceState,
+      faultCode: repo.currentFaultCode,
       chargingStatus: repo.currentChargingStatus,
       audioTransport: repo.currentAudioTransport,
       firmwareVersion: repo.currentFirmwareVersion,
+      hardwareRevision: repo.currentHardwareRevision,
     );
 
     // Trigger full sync
@@ -220,6 +236,10 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
 
   void powerOff() {
     ref.read(deviceRepositoryProvider).powerOff();
+  }
+
+  void openPairingMode() {
+    ref.read(deviceRepositoryProvider).openPairingMode();
   }
 }
 

@@ -176,7 +176,7 @@ class DevicePairingViewController
               status: BluetoothScanStatus.error,
               requiresPairingMode: true,
               errorMessage:
-                  'Device disconnected immediately. Please hold VOL+ and VOL− together for 3 seconds on your CHORD unit to enter Pairing Mode.',
+                  'Connection dropped immediately. Pairing mode is probably not open.\n\nPlease hold VOL+ and VOL− together for 3 seconds on your CHORD unit until the countdown appears on its screen.',
             );
           }
         }
@@ -194,7 +194,7 @@ class DevicePairingViewController
           status: BluetoothScanStatus.error,
           requiresPairingMode: true,
           errorMessage:
-              'Connection dropped. Please press and hold VOL+ and VOL− together for 3 seconds on your CHORD device to enter Pairing Mode.',
+              'Connection dropped immediately. Pairing mode is probably not open.\n\nPlease hold VOL+ and VOL− together for 3 seconds on your CHORD unit until the countdown appears on its screen.',
         );
       } else {
         state = state.copyWith(

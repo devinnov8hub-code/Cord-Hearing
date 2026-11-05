@@ -6,7 +6,6 @@ import 'package:cord_hearing/src/view/dashboard/widgets/dashboard_header.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/device_status_card.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/disconnected_bottom_sheet.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/hearing_profile_card.dart';
-import 'package:cord_hearing/src/view/dashboard/widgets/microphone_mode_card.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/volume_level_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,8 +75,6 @@ class DashboardView extends ConsumerWidget {
               const DeviceStatusCard(),
               16.verticalSpace,
               const HearingProfileCard(),
-              16.verticalSpace,
-              const MicrophoneModeCard(),
               16.verticalSpace,
               const VolumeLevelCard(),
               24.verticalSpace,

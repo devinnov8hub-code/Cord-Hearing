@@ -69,6 +69,9 @@ class ChordBleConstants {
   /// Earpiece (DSP) state: 0 off, 1 booting, 2 ready, 3 recovering, 4 failed (Read, Notify)
   static final Guid earpieceStateCharacteristicUuid = customGuid('000f');
 
+  /// Fault code: 0 no fault, 1-8 F01-F08 (Read, Notify)
+  static final Guid faultCodeCharacteristicUuid = customGuid('0010');
+
   // --- Standard Characteristics ---
   /// Battery Level: 0-100% (Read, Notify)
   static final Guid batteryLevelCharacteristicUuid =
@@ -81,6 +84,10 @@ class ChordBleConstants {
   /// Model Number String (Read)
   static final Guid modelNumberCharacteristicUuid =
       Guid('00002a24-0000-1000-8000-00805f9b34fb');
+
+  /// Hardware Revision String (Read)
+  static final Guid hardwareRevisionCharacteristicUuid =
+      Guid('00002a27-0000-1000-8000-00805f9b34fb');
 
   /// SMP Characteristic (Write Without Response, Notify)
   static final Guid smpCharacteristicUuid =
@@ -165,18 +172,51 @@ enum ChordMicMode {
 
 /// Active Hearing Profiles (Characteristic 0005)
 enum ChordProfile {
-  normal(1, 'Normal'),
-  noisy(2, 'Noisy'),
-  music(3, 'Music');
+  normal(1, 'Normal', 'Everyday', 'The fitted sound'),
+  noisy(2, 'Noisy', 'Busy places', 'Less low-frequency noise: low frequencies -6 dB, 500 Hz -3 dB'),
+  music(3, 'Music', 'Full range', 'Fuller low end (+2 dB), flatter mids for rich audio');
 
-  const ChordProfile(this.value, this.label);
+  const ChordProfile(this.value, this.label, this.subtitle, this.description);
   final int value;
   final String label;
+  final String subtitle;
+  final String description;
 
   static ChordProfile fromValue(int val) {
     return ChordProfile.values.firstWhere(
       (e) => e.value == val,
       orElse: () => ChordProfile.normal,
+    );
+  }
+}
+
+/// Earpiece Fault Codes (Characteristic 0010)
+enum ChordFaultCode {
+  none(0, 'None', 'Normal operation', 'No action needed'),
+  f01(1, 'F01 DSP failed', 'The earpiece sound processor failed (general)', 'Try Reboot ear'),
+  f02(2, 'F02 Unplugged', 'No earpiece on the cable', 'Check the cable. Normal while charging; light does not flash red for it'),
+  f03(3, 'F03 No boot', 'The earpiece answers but does not start', 'Try Reboot ear'),
+  f04(4, 'F04 Faulty', 'The earpiece rejects settings and could not be repaired', 'Contact support'),
+  f05(5, 'F05 Mismatch', 'The earpiece runs settings for another firmware version', 'Try Reboot ear (device then rewrites them)'),
+  f06(6, 'F06 Sync error', 'Writing settings to the earpiece failed', 'Try Reboot ear'),
+  f07(7, 'F07 Link error', 'Errors on the cable data lines', 'Check the cable'),
+  f08(8, 'F08 Link lost', 'The earpiece stopped answering while running', 'Check the cable'),
+  unknown(-1, 'Fault', 'General device fault', 'Contact support');
+
+  const ChordFaultCode(this.code, this.screenLabel, this.meaning, this.action);
+  final int code;
+  final String screenLabel;
+  final String meaning;
+  final String action;
+
+  bool get hasFault => code != 0;
+  bool get canReboot => code == 1 || code == 3 || code == 5 || code == 6;
+
+  static ChordFaultCode fromValue(int val) {
+    if (val == 0) return ChordFaultCode.none;
+    return ChordFaultCode.values.firstWhere(
+      (e) => e.code == val,
+      orElse: () => ChordFaultCode.unknown,
     );
   }
 }
