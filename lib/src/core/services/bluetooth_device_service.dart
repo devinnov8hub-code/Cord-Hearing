@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 export 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
+export 'package:flutter_blue_plus/flutter_blue_plus.dart'
+    show BluetoothConnectionState, BluetoothDevice, Guid;
 
 // Backward compatibility typedef for existing views
 typedef MicMode = ChordMicMode;
@@ -23,6 +25,18 @@ final deviceRepositoryProvider = Provider<BluetoothDeviceRepository>((ref) {
 abstract class BluetoothDeviceRepository {
   /// Currently connected device
   BluetoothDevice? get connectedDevice;
+
+  /// Whether the device is currently connected
+  bool get isConnected;
+
+  /// Current connection state
+  BluetoothConnectionState get currentConnectionState;
+
+  /// Current battery level (0-100%)
+  int get currentBatteryLevel;
+
+  /// Current telemetry connection status
+  ChordConnectionTelemetry get currentConnectionTelemetry;
 
   /// Connection state stream
   Stream<BluetoothConnectionState> get connectionState;
@@ -57,6 +71,8 @@ abstract class BluetoothDeviceRepository {
   ChordAudioTransport get currentAudioTransport;
   String get currentFirmwareVersion;
   String get currentHardwareRevision;
+  String get currentManufacturer;
+  String get currentModel;
 
   /// Permissions & discovery
   Future<bool> checkAndRequestPermissions();
@@ -117,6 +133,11 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
       StreamController<MapEntry<int, ChordControlStatus>>.broadcast();
 
   // Cached values
+  BluetoothConnectionState _currentConnectionState =
+      BluetoothConnectionState.disconnected;
+  int _currentBatteryLevel = 0;
+  ChordConnectionTelemetry _currentConnectionTelemetry =
+      ChordConnectionTelemetry.disconnected;
   int _currentVolume = 5;
   bool _currentIsMuted = false;
   ChordProfile _currentProfile = ChordProfile.normal;
@@ -127,6 +148,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   ChordAudioTransport _currentAudioTransport = ChordAudioTransport.none;
   String _currentFirmwareVersion = '';
   String _currentHardwareRevision = '';
+  String _currentManufacturer = '';
+  String _currentModel = '';
 
   // Cached characteristics for fast access
   BluetoothCharacteristic? _volumeChar;
@@ -134,9 +157,28 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   BluetoothCharacteristic? _profileChar;
   BluetoothCharacteristic? _micModeChar;
   BluetoothCharacteristic? _controlPointChar;
+  BluetoothCharacteristic? _batteryChar;
 
   @override
   BluetoothDevice? get connectedDevice => _connectedDevice;
+
+  @override
+  bool get isConnected =>
+      _connectedDevice != null &&
+      (_currentConnectionState == BluetoothConnectionState.connected ||
+          _currentConnectionTelemetry !=
+              ChordConnectionTelemetry.disconnected);
+
+  @override
+  BluetoothConnectionState get currentConnectionState =>
+      _currentConnectionState;
+
+  @override
+  int get currentBatteryLevel => _currentBatteryLevel;
+
+  @override
+  ChordConnectionTelemetry get currentConnectionTelemetry =>
+      _currentConnectionTelemetry;
 
   @override
   Stream<BluetoothConnectionState> get connectionState =>
@@ -201,6 +243,10 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   String get currentFirmwareVersion => _currentFirmwareVersion;
   @override
   String get currentHardwareRevision => _currentHardwareRevision;
+  @override
+  String get currentManufacturer => _currentManufacturer;
+  @override
+  String get currentModel => _currentModel;
 
   @override
   Future<bool> checkAndRequestPermissions() async {
@@ -254,13 +300,18 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     // Connect with autoConnect default false
     await device.connect(mtu: null);
     _connectedDevice = device;
+    _currentConnectionState = BluetoothConnectionState.connected;
+    _currentConnectionTelemetry = ChordConnectionTelemetry.connected;
+    _connectionStateController.add(BluetoothConnectionState.connected);
 
     // Listen to device connection state changes
     await _connectionStateSubscription?.cancel();
     _connectionStateSubscription = device.connectionState.listen((state) {
+      _currentConnectionState = state;
       _connectionStateController.add(state);
       if (state == BluetoothConnectionState.disconnected) {
         _connectedDevice = null;
+        _currentConnectionTelemetry = ChordConnectionTelemetry.disconnected;
         _clearCharacteristicCache();
       }
     });
@@ -285,9 +336,11 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     List<BluetoothService> services,
   ) async {
     for (final service in services) {
-      if (service.uuid == ChordBleConstants.chordControlServiceUuid) {
+      if (ChordBleConstants.isChordService(service.uuid)) {
         for (final c in service.characteristics) {
-          if (c.uuid == ChordBleConstants.volumeCharacteristicUuid) {
+          final uuidStr = c.uuid.str.toLowerCase();
+          if (c.uuid == ChordBleConstants.volumeCharacteristicUuid ||
+              uuidStr.contains('0002')) {
             _volumeChar = c;
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
@@ -295,7 +348,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
                 _volumeController.add(_currentVolume);
               }
             });
-          } else if (c.uuid == ChordBleConstants.muteCharacteristicUuid) {
+          } else if (c.uuid == ChordBleConstants.muteCharacteristicUuid ||
+              uuidStr.contains('000d')) {
             _muteChar = c;
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
@@ -304,7 +358,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               }
             });
           } else if (c.uuid ==
-              ChordBleConstants.activeProfileCharacteristicUuid) {
+                  ChordBleConstants.activeProfileCharacteristicUuid ||
+              uuidStr.contains('0005')) {
             _profileChar = c;
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
@@ -312,7 +367,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
                 _profileController.add(_currentProfile);
               }
             });
-          } else if (c.uuid == ChordBleConstants.micModeCharacteristicUuid) {
+          } else if (c.uuid == ChordBleConstants.micModeCharacteristicUuid ||
+              uuidStr.contains('0007')) {
             _micModeChar = c;
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
@@ -321,7 +377,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               }
             });
           } else if (c.uuid ==
-              ChordBleConstants.chargingStatusCharacteristicUuid) {
+                  ChordBleConstants.chargingStatusCharacteristicUuid ||
+              uuidStr.contains('0004')) {
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
                 _currentChargingStatus = ChordChargingStatus.fromValue(
@@ -331,7 +388,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               }
             });
           } else if (c.uuid ==
-              ChordBleConstants.deviceStatusCharacteristicUuid) {
+                  ChordBleConstants.deviceStatusCharacteristicUuid ||
+              uuidStr.contains('0009')) {
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
                 _deviceStatusController.add(
@@ -340,16 +398,32 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               }
             });
           } else if (c.uuid ==
-              ChordBleConstants.connectionStatusCharacteristicUuid) {
+                  ChordBleConstants.connectionStatusCharacteristicUuid ||
+              uuidStr.contains('0006')) {
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
-                _connectionTelemetryController.add(
-                  ChordConnectionTelemetry.fromValue(value[0]),
-                );
+                _currentConnectionTelemetry =
+                    ChordConnectionTelemetry.fromValue(value[0]);
+                _connectionTelemetryController.add(_currentConnectionTelemetry);
+                if (_currentConnectionTelemetry !=
+                    ChordConnectionTelemetry.disconnected) {
+                  _currentConnectionState = BluetoothConnectionState.connected;
+                  _connectionStateController.add(
+                    BluetoothConnectionState.connected,
+                  );
+                } else if (_currentConnectionState ==
+                    BluetoothConnectionState.connected) {
+                  _currentConnectionState =
+                      BluetoothConnectionState.disconnected;
+                  _connectionStateController.add(
+                    BluetoothConnectionState.disconnected,
+                  );
+                }
               }
             });
           } else if (c.uuid ==
-              ChordBleConstants.audioTransportCharacteristicUuid) {
+                  ChordBleConstants.audioTransportCharacteristicUuid ||
+              uuidStr.contains('000c')) {
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
                 _currentAudioTransport = ChordAudioTransport.fromValue(
@@ -359,14 +433,16 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               }
             });
           } else if (c.uuid ==
-              ChordBleConstants.earpieceStateCharacteristicUuid) {
+                  ChordBleConstants.earpieceStateCharacteristicUuid ||
+              uuidStr.contains('000f')) {
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
                 _currentEarpieceState = ChordEarpieceState.fromValue(value[0]);
                 _earpieceStateController.add(_currentEarpieceState);
               }
             });
-          } else if (c.uuid == ChordBleConstants.faultCodeCharacteristicUuid) {
+          } else if (c.uuid == ChordBleConstants.faultCodeCharacteristicUuid ||
+              uuidStr.contains('0010')) {
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
                 _currentFaultCode = ChordFaultCode.fromValue(value[0]);
@@ -381,14 +457,16 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               }
             } catch (_) {}
           } else if (c.uuid ==
-              ChordBleConstants.otaProgressCharacteristicUuid) {
+                  ChordBleConstants.otaProgressCharacteristicUuid ||
+              uuidStr.contains('0008')) {
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
                 _otaProgressController.add(value[0]);
               }
             });
           } else if (c.uuid ==
-              ChordBleConstants.firmwareVersionCharacteristicUuid) {
+                  ChordBleConstants.firmwareVersionCharacteristicUuid ||
+              uuidStr.contains('000e')) {
             try {
               final val = await _safeReadWithRetry(c);
               if (val.isNotEmpty) {
@@ -402,7 +480,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
               debugPrint('Error reading firmware version: $e');
             }
           } else if (c.uuid ==
-              ChordBleConstants.controlPointCharacteristicUuid) {
+                  ChordBleConstants.controlPointCharacteristicUuid ||
+              uuidStr.contains('000b')) {
             _controlPointChar = c;
             await _subscribeToCharacteristic(c, (value) {
               // Indication reply: 2 bytes {opcode, status}
@@ -414,45 +493,47 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
             });
           }
         }
-      } else if (service.uuid == ChordBleConstants.batteryServiceUuid) {
+      } else if (ChordBleConstants.isBatteryService(service.uuid)) {
         for (final c in service.characteristics) {
-          if (c.uuid == ChordBleConstants.batteryLevelCharacteristicUuid) {
+          if (ChordBleConstants.isBatteryLevelChar(c.uuid)) {
+            _batteryChar = c;
             await _subscribeToCharacteristic(c, (value) {
               if (value.isNotEmpty) {
-                _batteryLevelController.add(value[0]);
+                _currentBatteryLevel = value[0];
+                _batteryLevelController.add(_currentBatteryLevel);
               }
             });
             // Try initial read
             try {
               final val = await _safeReadWithRetry(c);
               if (val.isNotEmpty) {
-                _batteryLevelController.add(val[0]);
+                _currentBatteryLevel = val[0];
+                _batteryLevelController.add(_currentBatteryLevel);
               }
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('Initial battery level read failed: $e');
+            }
           }
         }
-      } else if (service.uuid ==
-          ChordBleConstants.deviceInformationServiceUuid) {
+      } else if (ChordBleConstants.isDeviceInfoService(service.uuid)) {
         for (final c in service.characteristics) {
-          if (c.uuid == ChordBleConstants.manufacturerNameCharacteristicUuid) {
+          if (ChordBleConstants.isManufacturerNameChar(c.uuid)) {
             try {
               final val = await _safeReadWithRetry(c);
               if (val.isNotEmpty) {
-                _manufacturerController.add(
-                  utf8.decode(val, allowMalformed: true),
-                );
+                _currentManufacturer = utf8.decode(val, allowMalformed: true);
+                _manufacturerController.add(_currentManufacturer);
               }
             } catch (_) {}
-          } else if (c.uuid ==
-              ChordBleConstants.modelNumberCharacteristicUuid) {
+          } else if (ChordBleConstants.isModelNumberChar(c.uuid)) {
             try {
               final val = await _safeReadWithRetry(c);
               if (val.isNotEmpty) {
-                _modelController.add(utf8.decode(val, allowMalformed: true));
+                _currentModel = utf8.decode(val, allowMalformed: true);
+                _modelController.add(_currentModel);
               }
             } catch (_) {}
-          } else if (c.uuid ==
-              ChordBleConstants.hardwareRevisionCharacteristicUuid) {
+          } else if (ChordBleConstants.isHardwareRevisionChar(c.uuid)) {
             try {
               final val = await _safeReadWithRetry(c);
               if (val.isNotEmpty) {
@@ -527,13 +608,19 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     _profileChar = null;
     _micModeChar = null;
     _controlPointChar = null;
+    _batteryChar = null;
   }
 
   @override
   Future<void> disconnect() async {
     _clearCharacteristicCache();
+    _currentConnectionState = BluetoothConnectionState.disconnected;
+    _currentConnectionTelemetry = ChordConnectionTelemetry.disconnected;
+    _connectionStateController.add(BluetoothConnectionState.disconnected);
     if (_connectedDevice != null) {
-      await _connectedDevice!.disconnect();
+      try {
+        await _connectedDevice!.disconnect();
+      } catch (_) {}
       _connectedDevice = null;
     }
   }
@@ -565,7 +652,20 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   }
 
   @override
-  Future<void> sync() async => _sendCommand(ChordOpcode.sync);
+  Future<void> sync() async {
+    await _sendCommand(ChordOpcode.sync);
+    if (_batteryChar != null) {
+      try {
+        final val = await _safeReadWithRetry(_batteryChar!);
+        if (val.isNotEmpty) {
+          _currentBatteryLevel = val[0];
+          _batteryLevelController.add(_currentBatteryLevel);
+        }
+      } catch (e) {
+        debugPrint('Battery re-read on sync error: $e');
+      }
+    }
+  }
 
   @override
   Future<void> reboot() async => _sendCommand(ChordOpcode.reboot);

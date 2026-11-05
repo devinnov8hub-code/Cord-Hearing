@@ -1,6 +1,6 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
-import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
+import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +14,10 @@ class DeviceActionsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(dashboardProvider.notifier);
     final state = ref.watch(dashboardProvider);
-    final isConnected = !state.connectionState.toLowerCase().contains('dis');
+    final repo = ref.read(deviceRepositoryProvider);
+    final isConnected = state.isConnected ||
+        repo.isConnected ||
+        repo.connectedDevice != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -470,58 +473,67 @@ class DeviceActionsCard extends ConsumerWidget {
     bool isDestructive = false,
   }) {
     return InkWell(
-      onTap: isEnabled ? onTap : null,
+      onTap: () {
+        if (!isEnabled) {
+          Toasts.showError(
+            'CHORD device is not connected. Please connect your device first.',
+          );
+          return;
+        }
+        onTap();
+      },
       borderRadius: BorderRadius.circular(12.r),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4).r,
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8).r,
-              decoration: BoxDecoration(
-                color: isDestructive
-                    ? Colors.red.withValues(alpha: 0.1)
-                    : const Color(0xFF2BA9E0).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      child: Opacity(
+        opacity: isEnabled ? 1.0 : 0.45,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4).r,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8).r,
+                decoration: BoxDecoration(
+                  color: isDestructive
+                      ? Colors.red.withValues(alpha: 0.1)
+                      : const Color(0xFF2BA9E0).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 20.spMin,
+                  color: isDestructive ? Colors.red : const Color(0xFF2BA9E0),
+                ),
               ),
-              child: Icon(
-                icon,
+              12.horizontalSpace,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14.spMin,
+                        fontWeight: FontWeight.w600,
+                        color: isDestructive ? Colors.red : Colors.black87,
+                      ),
+                    ),
+                    2.verticalSpace,
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11.spMin,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
                 size: 20.spMin,
-                color: isDestructive ? Colors.red : const Color(0xFF2BA9E0),
+                color: Colors.grey[400],
               ),
-            ),
-            12.horizontalSpace,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14.spMin,
-                      fontWeight: FontWeight.w600,
-                      color: isDestructive
-                          ? Colors.red
-                          : (isEnabled ? Colors.black87 : Colors.grey),
-                    ),
-                  ),
-                  2.verticalSpace,
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11.spMin,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              size: 20.spMin,
-              color: Colors.grey[400],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

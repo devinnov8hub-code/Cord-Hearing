@@ -21,11 +21,13 @@ class ChordBleConstants {
   static final Guid chordControlServiceUuid = customGuid('0001');
 
   /// Standard Battery Service (0x180F)
-  static final Guid batteryServiceUuid =
+  static final Guid batteryServiceUuid = Guid('180f');
+  static final Guid batteryServiceUuid128 =
       Guid('0000180f-0000-1000-8000-00805f9b34fb');
 
   /// Standard Device Information Service (0x180A)
-  static final Guid deviceInformationServiceUuid =
+  static final Guid deviceInformationServiceUuid = Guid('180a');
+  static final Guid deviceInformationServiceUuid128 =
       Guid('0000180a-0000-1000-8000-00805f9b34fb');
 
   /// SMP Service for OTA updates (mcumgr)
@@ -74,20 +76,68 @@ class ChordBleConstants {
 
   // --- Standard Characteristics ---
   /// Battery Level: 0-100% (Read, Notify)
-  static final Guid batteryLevelCharacteristicUuid =
+  static final Guid batteryLevelCharacteristicUuid = Guid('2a19');
+  static final Guid batteryLevelCharacteristicUuid128 =
       Guid('00002a19-0000-1000-8000-00805f9b34fb');
 
   /// Manufacturer Name String (Read)
-  static final Guid manufacturerNameCharacteristicUuid =
+  static final Guid manufacturerNameCharacteristicUuid = Guid('2a29');
+  static final Guid manufacturerNameCharacteristicUuid128 =
       Guid('00002a29-0000-1000-8000-00805f9b34fb');
 
   /// Model Number String (Read)
-  static final Guid modelNumberCharacteristicUuid =
+  static final Guid modelNumberCharacteristicUuid = Guid('2a24');
+  static final Guid modelNumberCharacteristicUuid128 =
       Guid('00002a24-0000-1000-8000-00805f9b34fb');
 
   /// Hardware Revision String (Read)
-  static final Guid hardwareRevisionCharacteristicUuid =
+  static final Guid hardwareRevisionCharacteristicUuid = Guid('2a27');
+  static final Guid hardwareRevisionCharacteristicUuid128 =
       Guid('00002a27-0000-1000-8000-00805f9b34fb');
+
+  /// Match helper for 16-bit / 128-bit UUIDs
+  static bool matches(Guid actual, String shortHex) {
+    final a = actual.str.toLowerCase();
+    final s = shortHex.toLowerCase();
+    return a == s ||
+        a == '0000$s-0000-1000-8000-00805f9b34fb' ||
+        a.contains(s);
+  }
+
+  static bool isChordService(Guid uuid) {
+    final s = uuid.str.toLowerCase();
+    return uuid == chordControlServiceUuid || s.contains('0001');
+  }
+
+  static bool isBatteryService(Guid uuid) =>
+      uuid == batteryServiceUuid ||
+      uuid == batteryServiceUuid128 ||
+      matches(uuid, '180f');
+
+  static bool isBatteryLevelChar(Guid uuid) =>
+      uuid == batteryLevelCharacteristicUuid ||
+      uuid == batteryLevelCharacteristicUuid128 ||
+      matches(uuid, '2a19');
+
+  static bool isDeviceInfoService(Guid uuid) =>
+      uuid == deviceInformationServiceUuid ||
+      uuid == deviceInformationServiceUuid128 ||
+      matches(uuid, '180a');
+
+  static bool isManufacturerNameChar(Guid uuid) =>
+      uuid == manufacturerNameCharacteristicUuid ||
+      uuid == manufacturerNameCharacteristicUuid128 ||
+      matches(uuid, '2a29');
+
+  static bool isModelNumberChar(Guid uuid) =>
+      uuid == modelNumberCharacteristicUuid ||
+      uuid == modelNumberCharacteristicUuid128 ||
+      matches(uuid, '2a24');
+
+  static bool isHardwareRevisionChar(Guid uuid) =>
+      uuid == hardwareRevisionCharacteristicUuid ||
+      uuid == hardwareRevisionCharacteristicUuid128 ||
+      matches(uuid, '2a27');
 
   /// SMP Characteristic (Write Without Response, Notify)
   static final Guid smpCharacteristicUuid =

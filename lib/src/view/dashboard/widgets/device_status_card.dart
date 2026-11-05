@@ -1,7 +1,7 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
-import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
+import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -23,7 +23,11 @@ class DeviceStatusCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dashboardProvider);
-    final isDisconnected = state.connectionState.toLowerCase().contains('dis');
+    final repo = ref.read(deviceRepositoryProvider);
+    final isConnected = state.isConnected ||
+        repo.isConnected ||
+        repo.connectedDevice != null;
+    final isDisconnected = !isConnected;
 
     return Container(
       padding: const EdgeInsets.all(16).r,
@@ -115,7 +119,7 @@ class DeviceStatusCard extends ConsumerWidget {
                   Text(
                     state.isStreamingAudio
                         ? 'Streaming Audio (${state.audioTransport.label})'
-                        : state.connectionState,
+                        : (isConnected ? 'Connected' : 'Disconnected'),
                     style: TextStyle(
                       fontSize: 14.spMin,
                       color: isDisconnected

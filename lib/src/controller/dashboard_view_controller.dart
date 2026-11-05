@@ -44,6 +44,11 @@ class DashboardState {
   final bool isStreamingAudio;
   final String? lastCommandMessage;
 
+  bool get isConnected =>
+      !connectionState.toLowerCase().contains('dis') &&
+      (connectionState.toLowerCase().contains('conn') ||
+          connectionState.toLowerCase().contains('stream'));
+
   DashboardState copyWith({
     int? batteryLevel,
     String? connectionState,
@@ -106,63 +111,110 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
 
     _subscriptions.addAll([
       repo.batteryLevel.listen((level) {
-        state = state.copyWith(batteryLevel: level);
+        state = state.copyWith(
+          batteryLevel: level,
+          connectionState: 'Connected',
+        );
       }),
       repo.connectionState.listen((status) {
+        final isConn = status == BluetoothConnectionState.connected;
         state = state.copyWith(
-          connectionState:
-              status.name[0].toUpperCase() + status.name.substring(1),
+          connectionState: isConn ? 'Connected' : 'Disconnected',
         );
       }),
       repo.volume.listen((vol) {
-        state = state.copyWith(volume: vol);
+        state = state.copyWith(
+          volume: vol,
+          connectionState: 'Connected',
+        );
       }),
       repo.isMuted.listen((muted) {
-        state = state.copyWith(isMuted: muted);
+        state = state.copyWith(
+          isMuted: muted,
+          connectionState: 'Connected',
+        );
       }),
       repo.activeProfile.listen((p) {
-        state = state.copyWith(profile: p);
+        state = state.copyWith(
+          profile: p,
+          connectionState: 'Connected',
+        );
       }),
       repo.micMode.listen((mode) {
-        state = state.copyWith(micMode: mode);
+        state = state.copyWith(
+          micMode: mode,
+          connectionState: 'Connected',
+        );
       }),
       repo.chargingStatus.listen((status) {
-        state = state.copyWith(chargingStatus: status);
+        state = state.copyWith(
+          chargingStatus: status,
+          connectionState: 'Connected',
+        );
       }),
       repo.deviceStatus.listen((status) {
-        state = state.copyWith(deviceStatus: status);
+        state = state.copyWith(
+          deviceStatus: status,
+          connectionState: 'Connected',
+        );
       }),
       repo.earpieceState.listen((earpiece) {
-        state = state.copyWith(earpieceState: earpiece);
+        state = state.copyWith(
+          earpieceState: earpiece,
+          connectionState: 'Connected',
+        );
       }),
       repo.faultCode.listen((fault) {
-        state = state.copyWith(faultCode: fault);
+        state = state.copyWith(
+          faultCode: fault,
+          connectionState: 'Connected',
+        );
       }),
       repo.audioTransport.listen((transport) {
-        state = state.copyWith(audioTransport: transport);
+        state = state.copyWith(
+          audioTransport: transport,
+          connectionState: 'Connected',
+        );
       }),
       repo.connectionTelemetry.listen((telemetry) {
+        final isStreaming =
+            telemetry == ChordConnectionTelemetry.streamingAudio;
+        final isConnected =
+            telemetry != ChordConnectionTelemetry.disconnected;
         state = state.copyWith(
-          isStreamingAudio:
-              telemetry == ChordConnectionTelemetry.streamingAudio,
+          isStreamingAudio: isStreaming,
+          connectionState: isConnected ? 'Connected' : 'Disconnected',
         );
       }),
       repo.firmwareVersion.listen((version) {
-        state = state.copyWith(firmwareVersion: version);
+        state = state.copyWith(
+          firmwareVersion: version,
+          connectionState: 'Connected',
+        );
       }),
       repo.hardwareRevision.listen((hwRev) {
-        state = state.copyWith(hardwareRevision: hwRev);
+        state = state.copyWith(
+          hardwareRevision: hwRev,
+          connectionState: 'Connected',
+        );
       }),
       repo.manufacturerName.listen((mfg) {
-        state = state.copyWith(manufacturer: mfg);
+        state = state.copyWith(
+          manufacturer: mfg,
+          connectionState: 'Connected',
+        );
       }),
       repo.modelNumber.listen((model) {
-        state = state.copyWith(model: model);
+        state = state.copyWith(
+          model: model,
+          connectionState: 'Connected',
+        );
       }),
       repo.controlResponses.listen((entry) {
         state = state.copyWith(
           lastCommandMessage:
               'Command 0x${entry.key.toRadixString(16)}: ${entry.value.description}',
+          connectionState: 'Connected',
         );
       }),
     ]);
@@ -175,9 +227,15 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
           : device.remoteId.str;
     }
 
+    final isDeviceConnected = repo.isConnected ||
+        repo.currentConnectionState == BluetoothConnectionState.connected ||
+        device != null;
+
     // Initialize with cached repo values
     final initial = DashboardState(
       deviceName: name,
+      connectionState: isDeviceConnected ? 'Connected' : 'Disconnected',
+      batteryLevel: repo.currentBatteryLevel,
       volume: repo.currentVolume,
       isMuted: repo.currentIsMuted,
       profile: repo.currentProfile,
@@ -188,10 +246,16 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       audioTransport: repo.currentAudioTransport,
       firmwareVersion: repo.currentFirmwareVersion,
       hardwareRevision: repo.currentHardwareRevision,
+      manufacturer: repo.currentManufacturer,
+      model: repo.currentModel,
+      isStreamingAudio: repo.currentConnectionTelemetry ==
+          ChordConnectionTelemetry.streamingAudio,
     );
 
-    // Trigger full sync
-    repo.sync();
+    // Trigger full sync if connected
+    if (isDeviceConnected) {
+      repo.sync();
+    }
 
     return initial;
   }

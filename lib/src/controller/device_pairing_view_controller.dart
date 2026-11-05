@@ -135,7 +135,7 @@ class DevicePairingViewController
 
     state = state.copyWith(status: BluetoothScanStatus.scanning, devices: []);
     try {
-      FlutterBluePlus.setLogLevel(LogLevel.verbose);
+      await FlutterBluePlus.setLogLevel(LogLevel.verbose);
       await FlutterBluePlus.startScan(
         withServices: [ChordBleConstants.chordControlServiceUuid],
         timeout: const Duration(seconds: 10),
