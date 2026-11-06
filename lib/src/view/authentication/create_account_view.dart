@@ -64,8 +64,8 @@ class CreateAccountView extends StatelessWidget {
                           constraints: BoxConstraints(
                             minHeight: constraints.maxHeight,
                           ),
-                          child: IntrinsicHeight(
-                            child: const _CreateAccountContent(),
+                          child: const IntrinsicHeight(
+                            child: _CreateAccountContent(),
                           ),
                         );
                       },
