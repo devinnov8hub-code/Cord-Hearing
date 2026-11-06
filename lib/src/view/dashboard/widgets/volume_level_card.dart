@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -34,10 +36,10 @@ class VolumeLevelCard extends ConsumerWidget {
                   ),
                   8.horizontalSpace,
                   Text(
-                    'Volume level (4 dB/step)',
+                    'Phone Audio Volume',
                     style: TextStyle(
                       fontSize: 14.spMin,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -78,6 +80,17 @@ class VolumeLevelCard extends ConsumerWidget {
               ),
             ],
           ),
+          4.verticalSpace,
+          Text(
+            Platform.isIOS
+                ? 'Applies to Android streaming only (hearing-aid microphone gain stays at fitted level).'
+                : 'Music & calls volume (sound from hearing-aid microphones stays at fitted level).',
+            style: TextStyle(
+              fontSize: 11.spMin,
+              color: Colors.grey[600],
+              height: 1.3,
+            ),
+          ),
           16.verticalSpace,
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -113,20 +126,21 @@ class VolumeLevelCard extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      state.isMuted ? 'MUT' : state.volume.toString().padLeft(2, '0'),
+                      state.isMuted ? 'Muted' : '${state.volume}/10',
                       style: TextStyle(
                         color: state.isMuted
                             ? Colors.red
                             : AppColors.primaryColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14.spMin,
+                        fontSize: 13.spMin,
                       ),
                     ),
-                    16.horizontalSpace,
+                    14.horizontalSpace,
                     Row(
                       children: List.generate(10, (index) {
                         final stepNumber = index + 1;
-                        final isActive = !state.isMuted && stepNumber <= state.volume;
+                        final isActive =
+                            !state.isMuted && stepNumber <= state.volume;
                         return Container(
                           width: 4.w,
                           height: 16.h,

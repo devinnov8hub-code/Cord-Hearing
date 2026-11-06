@@ -1,6 +1,6 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
-import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
+import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +14,10 @@ class DeviceActionsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(dashboardProvider.notifier);
     final state = ref.watch(dashboardProvider);
-    final isConnected = !state.connectionState.toLowerCase().contains('dis');
+    final repo = ref.read(deviceRepositoryProvider);
+    final isConnected = state.isConnected ||
+        repo.isConnected ||
+        repo.connectedDevice != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,6 +79,12 @@ class DeviceActionsCard extends ConsumerWidget {
                 state.model.isNotEmpty ? state.model : 'nRF5340 Body Unit',
               ),
               _buildDiagRow(
+                'Hardware Revision',
+                state.hardwareRevision.isNotEmpty
+                    ? state.hardwareRevision
+                    : 'nRF5340-DK (0x2A27)',
+              ),
+              _buildDiagRow(
                 'Manufacturer',
                 state.manufacturer.isNotEmpty
                     ? state.manufacturer
@@ -86,6 +95,13 @@ class DeviceActionsCard extends ConsumerWidget {
                 state.earpieceState.label,
                 highlight:
                     state.earpieceState == ChordEarpieceState.failed,
+              ),
+              _buildDiagRow(
+                'Active Fault Code',
+                state.faultCode.hasFault
+                    ? state.faultCode.screenLabel
+                    : 'None (OK)',
+                highlight: state.faultCode.hasFault,
               ),
               _buildDiagRow(
                 'Audio Transport',
@@ -138,7 +154,41 @@ class DeviceActionsCard extends ConsumerWidget {
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
 
-              // 2. OTA Firmware Update
+              // 2. Add a Phone (Pair Another Phone) - Opcode 0x03
+              _buildActionButton(
+                context,
+                icon: Icons.phonelink_ring,
+                title: 'Add a Phone (Pair Another Phone)',
+                subtitle:
+                    'Opens 120s pairing mode on CHORD; this phone disconnects',
+                isEnabled: isConnected,
+                onTap: () {
+                  _showConfirmDialog(
+                    context,
+                    title: 'Pair Another Phone?',
+                    message:
+                        'Opening pairing mode (Opcode 0x03) will disconnect this phone from CHORD so another phone can connect and pair.\n\nPairing mode will stay open on CHORD for 120 seconds.',
+                    confirmText: 'Open Pairing Mode',
+                    isDestructive: false,
+                    onConfirm: () {
+                      controller.openPairingMode();
+                      Navigator.pop(context);
+                      Toasts.showSuccess(
+                        'Pairing mode opened on CHORD (120s countdown).',
+                      );
+                      Navigator.of(context).pushAndRemoveUntil<void>(
+                        MaterialPageRoute<void>(
+                          builder: (context) => const DevicePairingView(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                  );
+                },
+              ),
+              Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
+
+              // 3. OTA Firmware Update
               _buildActionButton(
                 context,
                 icon: Icons.system_update_alt,
@@ -149,20 +199,21 @@ class DeviceActionsCard extends ConsumerWidget {
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
 
-              // 3. Reboot Device
+              // 4. Reboot Chord (Opcode 0x09)
               _buildActionButton(
                 context,
                 icon: Icons.restart_alt,
-                title: 'Reboot Device',
-                subtitle: 'Restart the CHORD body unit (reboots in 0.5s)',
+                title: 'Reboot Chord',
+                subtitle:
+                    'Restart the whole CHORD unit (reboots in 0.5s; reconnects in ~10s)',
                 isEnabled: isConnected,
                 onTap: () {
                   _showConfirmDialog(
                     context,
-                    title: 'Reboot Hearing Device?',
+                    title: 'Reboot Chord?',
                     message:
-                        'The device will reboot in 0.5 seconds and momentarily disconnect from your phone.',
-                    confirmText: 'Reboot',
+                        'The device will restart the whole unit in 0.5 seconds and momentarily disconnect from your phone.',
+                    confirmText: 'Reboot Chord',
                     isDestructive: false,
                     onConfirm: () {
                       controller.rebootDevice();
@@ -176,33 +227,40 @@ class DeviceActionsCard extends ConsumerWidget {
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
 
-              // 4. Power Off
+              // 5. Shut Down (Opcode 0x08)
               _buildActionButton(
                 context,
                 icon: Icons.power_settings_new,
-                title: 'Power Off Device',
-                subtitle: 'Requires PMIC. Only physical power button can wake it',
+                title: 'Shut Down',
+                subtitle:
+                    'Powers off unit. Unplug charger first; power button wakes it',
                 isEnabled: isConnected,
                 isDestructive: true,
                 onTap: () {
+                  if (state.chargingStatus == ChordChargingStatus.charging) {
+                    Toasts.showError(
+                      'Shut down unavailable while charging. Please unplug the USB-C charger first.',
+                    );
+                    return;
+                  }
                   _showConfirmDialog(
                     context,
-                    title: 'Power Off CHORD?',
+                    title: 'Shut Down CHORD?',
                     message:
-                        'Once powered off, only the physical power button on the unit will wake it up.\n\nNote: Requires PMIC fitted and cannot be used while charging.',
-                    confirmText: 'Power Off',
+                        'Once powered off, only the physical power button on the unit or plugging in the charger will wake it up.\n\nNote: Requires PMIC fitted and cannot be used while charging.',
+                    confirmText: 'Shut Down',
                     isDestructive: true,
                     onConfirm: () {
                       controller.powerOff();
                       Navigator.pop(context);
-                      Toasts.showSuccess('Power off command sent to CHORD');
+                      Toasts.showSuccess('Shut down command sent to CHORD');
                     },
                   );
                 },
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
 
-              // 5. Forget All Phones
+              // 6. Forget All Phones (Opcode 0x0a)
               _buildActionButton(
                 context,
                 icon: Icons.phonelink_erase,
@@ -236,12 +294,13 @@ class DeviceActionsCard extends ConsumerWidget {
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
 
-              // 6. Factory Reset
+              // 7. Factory Reset (Opcode 0x02)
               _buildActionButton(
                 context,
                 icon: Icons.restore,
                 title: 'Factory Reset',
-                subtitle: 'Erases all bonds & audio settings and reboots',
+                subtitle:
+                    'App only: Erases all bonds, settings & profiles, and reboots',
                 isEnabled: isConnected,
                 isDestructive: true,
                 onTap: () {
@@ -249,7 +308,7 @@ class DeviceActionsCard extends ConsumerWidget {
                     context,
                     title: 'Factory Reset CHORD?',
                     message:
-                        'This will erase all settings, profiles, and Bluetooth bonds on the unit. Every phone will need to pair again.',
+                        'Factory reset is only available from the CHORD app.\n\nThis will permanently erase all settings, hearing profiles, and Bluetooth bonds on the unit. Every phone will need to pair again.',
                     confirmText: 'Factory Reset',
                     isDestructive: true,
                     onConfirm: () {
@@ -316,7 +375,7 @@ class DeviceActionsCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Hardware: nRF5340 Development Kit',
+              'Hardware: ${state.hardwareRevision.isNotEmpty ? state.hardwareRevision : (state.model.isNotEmpty ? state.model : 'nRF5340 Development Kit')}',
               style: TextStyle(
                 fontSize: 13.spMin,
                 fontWeight: FontWeight.w600,
@@ -414,58 +473,67 @@ class DeviceActionsCard extends ConsumerWidget {
     bool isDestructive = false,
   }) {
     return InkWell(
-      onTap: isEnabled ? onTap : null,
+      onTap: () {
+        if (!isEnabled) {
+          Toasts.showError(
+            'CHORD device is not connected. Please connect your device first.',
+          );
+          return;
+        }
+        onTap();
+      },
       borderRadius: BorderRadius.circular(12.r),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4).r,
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8).r,
-              decoration: BoxDecoration(
-                color: isDestructive
-                    ? Colors.red.withValues(alpha: 0.1)
-                    : const Color(0xFF2BA9E0).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      child: Opacity(
+        opacity: isEnabled ? 1.0 : 0.45,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4).r,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8).r,
+                decoration: BoxDecoration(
+                  color: isDestructive
+                      ? Colors.red.withValues(alpha: 0.1)
+                      : const Color(0xFF2BA9E0).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 20.spMin,
+                  color: isDestructive ? Colors.red : const Color(0xFF2BA9E0),
+                ),
               ),
-              child: Icon(
-                icon,
+              12.horizontalSpace,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14.spMin,
+                        fontWeight: FontWeight.w600,
+                        color: isDestructive ? Colors.red : Colors.black87,
+                      ),
+                    ),
+                    2.verticalSpace,
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11.spMin,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
                 size: 20.spMin,
-                color: isDestructive ? Colors.red : const Color(0xFF2BA9E0),
+                color: Colors.grey[400],
               ),
-            ),
-            12.horizontalSpace,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14.spMin,
-                      fontWeight: FontWeight.w600,
-                      color: isDestructive
-                          ? Colors.red
-                          : (isEnabled ? Colors.black87 : Colors.grey),
-                    ),
-                  ),
-                  2.verticalSpace,
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11.spMin,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              size: 20.spMin,
-              color: Colors.grey[400],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

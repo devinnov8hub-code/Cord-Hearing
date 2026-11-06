@@ -67,4 +67,3 @@ class LogoutBottomSheet extends StatelessWidget {
     );
   }
 }
-

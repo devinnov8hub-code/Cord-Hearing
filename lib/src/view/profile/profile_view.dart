@@ -1,10 +1,12 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
+import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:cord_hearing/src/core/services/firebase_auth_service.dart';
 import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
 import 'package:cord_hearing/src/view/authentication/login_view.dart';
+import 'package:cord_hearing/src/view/help/chord_help_view.dart';
 import 'package:cord_hearing/src/view/profile/widgets/device_actions_card.dart';
 import 'package:cord_hearing/src/view/profile/widgets/disconnect_bottom_sheet.dart';
 import 'package:cord_hearing/src/view/profile/widgets/logout_bottom_sheet.dart';
@@ -99,6 +101,78 @@ class ProfileView extends ConsumerWidget {
               ProfileInfoCard(deviceName: state.deviceName),
               24.verticalSpace,
               const DeviceActionsCard(),
+              24.verticalSpace,
+              // CHORD Device Help & Guides Card (Spec Section 3, 5, 8, 12)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16).r,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F7FF),
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: const Color(0xFFB9DCF7)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.menu_book,
+                          color: AppColors.primaryColor,
+                          size: 20.spMin,
+                        ),
+                        8.horizontalSpace,
+                        Text(
+                          'Device Help & Guides',
+                          style: TextStyle(
+                            fontSize: 15.spMin,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    6.verticalSpace,
+                    Text(
+                      'Explore body unit button gestures, status light color patterns, and how to perform a hearing test on the device.',
+                      style: TextStyle(
+                        fontSize: 12.spMin,
+                        color: Colors.grey[700],
+                        height: 1.4,
+                      ),
+                    ),
+                    12.verticalSpace,
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (context) => const ChordHelpView(),
+                            ),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: AppColors.primaryColor,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                        ),
+                        child: Text(
+                          'View Help & Guides',
+                          style: TextStyle(
+                            fontSize: 13.spMin,
+                            color: AppColors.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               24.verticalSpace,
               AppButton(
                 text: 'Disconnect device',

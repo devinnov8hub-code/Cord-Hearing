@@ -56,29 +56,56 @@ class HearingProfileCard extends ConsumerWidget {
           Row(
             children: [
               _buildProfileButton(
-                label: 'Normal',
-                icon: Icons.nature_people,
                 profile: ChordProfile.normal,
+                icon: Icons.nature_people,
                 current: state.profile,
                 onTap: () => controller.setProfile(ChordProfile.normal),
               ),
               8.horizontalSpace,
               _buildProfileButton(
-                label: 'Noisy',
-                icon: Icons.restaurant,
                 profile: ChordProfile.noisy,
+                icon: Icons.restaurant,
                 current: state.profile,
                 onTap: () => controller.setProfile(ChordProfile.noisy),
               ),
               8.horizontalSpace,
               _buildProfileButton(
-                label: 'Music',
-                icon: Icons.music_note,
                 profile: ChordProfile.music,
+                icon: Icons.music_note,
                 current: state.profile,
                 onTap: () => controller.setProfile(ChordProfile.music),
               ),
             ],
+          ),
+          12.verticalSpace,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8).r,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16.spMin,
+                  color: AppColors.primaryColor,
+                ),
+                8.horizontalSpace,
+                Expanded(
+                  child: Text(
+                    state.profile.description,
+                    style: TextStyle(
+                      fontSize: 11.spMin,
+                      color: Colors.grey[700],
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -86,9 +113,8 @@ class HearingProfileCard extends ConsumerWidget {
   }
 
   Widget _buildProfileButton({
-    required String label,
-    required IconData icon,
     required ChordProfile profile,
+    required IconData icon,
     required ChordProfile current,
     required VoidCallback onTap,
   }) {
@@ -98,7 +124,7 @@ class HearingProfileCard extends ConsumerWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12).r,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4).r,
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primaryColor : Colors.white,
             borderRadius: BorderRadius.circular(12.r),
@@ -125,14 +151,24 @@ class HearingProfileCard extends ConsumerWidget {
                 color: isSelected ? Colors.white : Colors.black87,
                 size: 20.spMin,
               ),
-              6.verticalSpace,
+              4.verticalSpace,
               Text(
-                label,
+                profile.label,
                 style: TextStyle(
                   fontSize: 12.spMin,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: FontWeight.w600,
                   color: isSelected ? Colors.white : Colors.black87,
                 ),
+              ),
+              2.verticalSpace,
+              Text(
+                profile.subtitle,
+                style: TextStyle(
+                  fontSize: 10.spMin,
+                  fontWeight: FontWeight.w400,
+                  color: isSelected ? Colors.white70 : Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

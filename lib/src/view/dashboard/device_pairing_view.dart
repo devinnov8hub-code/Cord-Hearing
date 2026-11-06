@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:cord_hearing/src/controller/device_pairing_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
+import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
 import 'package:cord_hearing/src/view/dashboard/dashboard_view.dart';
+import 'package:cord_hearing/src/view/help/chord_help_view.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -66,18 +70,121 @@ class DevicePairingView extends ConsumerWidget {
                     ),
                   ),
                 ),
-                24.verticalSpace,
-                Text(
-                  'Make sure your hearing device is turned on and Bluetooth is enabled on your phone. Keep your device close to your phone while we search for and connect to it.',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    fontSize: 14.spMin,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF666666),
-                    height: 1.5,
+                20.verticalSpace,
+                // Primary Pairing Instruction (Spec Section 3 & 6)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16).r,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F7FF),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(color: const Color(0xFFB9DCF7)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.bluetooth_searching,
+                                color: AppColors.primaryColor,
+                                size: 20.spMin,
+                              ),
+                              8.horizontalSpace,
+                              Text(
+                                'Pairing Gesture',
+                                style: TextStyle(
+                                  fontSize: 14.spMin,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (context) =>
+                                      const ChordHelpView(),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Buttons Guide',
+                                  style: TextStyle(
+                                    fontSize: 12.spMin,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  size: 16,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      8.verticalSpace,
+                      Text(
+                        'Hold VOL+ and VOL− together for 3 seconds until the CHORD screen shows a countdown (120s) and the light blinks blue fast.',
+                        style: TextStyle(
+                          fontSize: 13.spMin,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                24.verticalSpace,
+                if (Platform.isIOS) ...[
+                  12.verticalSpace,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ).r,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: Colors.grey.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.phone_iphone,
+                          size: 18.spMin,
+                          color: Colors.grey[700],
+                        ),
+                        8.horizontalSpace,
+                        Expanded(
+                          child: Text(
+                            'iPhone connects to CHORD for control, status, and firmware updates. Audio streaming for music and calls requires a compatible Android device.',
+                            style: TextStyle(
+                              fontSize: 11.spMin,
+                              color: Colors.grey[700],
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                20.verticalSpace,
                 Center(
                   child: SizedBox(
                     width: 200.w,
@@ -224,15 +331,34 @@ class DevicePairingView extends ConsumerWidget {
                             scanState.status == BluetoothScanStatus.scanned &&
                             scanState.systemDevices.isEmpty
                         ? Padding(
-                            padding: const EdgeInsets.all(24).r,
-                            child: Center(
-                              child: Text(
-                                'No CHORD devices found',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14.spMin,
+                            padding: const EdgeInsets.all(20).r,
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.bluetooth_searching,
+                                  size: 32.spMin,
+                                  color: Colors.grey[400],
                                 ),
-                              ),
+                                8.verticalSpace,
+                                Text(
+                                  'No CHORD devices found',
+                                  style: TextStyle(
+                                    color: Colors.grey[800],
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14.spMin,
+                                  ),
+                                ),
+                                8.verticalSpace,
+                                Text(
+                                  '• Hold VOL+ and VOL− together for 3s to enter Pairing Mode.\n• If another phone is connected, CHORD stops advertising. Disconnect the other phone first.',
+                                  textAlign: TextAlign.left,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12.spMin,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
                             ),
                           )
                         : Builder(
