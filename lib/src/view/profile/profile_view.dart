@@ -6,6 +6,7 @@ import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
 import 'package:cord_hearing/src/view/authentication/login_view.dart';
+import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
 import 'package:cord_hearing/src/view/help/chord_help_view.dart';
 import 'package:cord_hearing/src/view/profile/widgets/device_actions_card.dart';
 import 'package:cord_hearing/src/view/profile/widgets/disconnect_bottom_sheet.dart';
@@ -48,7 +49,7 @@ class ProfileView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dashboardProvider);
-    final repo = ref.read(deviceRepositoryProvider);
+    final isConnected = state.isConnected;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -80,17 +81,6 @@ class ProfileView extends ConsumerWidget {
           ),
         ),
         centerTitle: false,
-        actions: const [
-          // IconButton(
-          //   onPressed: () => _showLogoutSheet(context, ref),
-          //   tooltip: 'Log Out',
-          //   icon: const Icon(
-          //     Icons.logout_rounded,
-          //     color: Color(0xFFD32F2F),
-          //   ),
-          // ),
-          // 8.horizontalSpace,
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -100,27 +90,58 @@ class ProfileView extends ConsumerWidget {
             children: [
               ProfileInfoCard(deviceName: state.deviceName),
               24.verticalSpace,
-              AppButton(
-                text: 'Disconnect device',
-                icon: const Icon(Icons.bluetooth_disabled, color: Colors.white),
-                bgColor: const Color(0xFFD32F2F),
-                textColor: Colors.white,
-                borderRadius: 24.r,
-                onPressed: () {
-                  DialogSheet.showCustom(
-                    context,
-                    child: DisconnectBottomSheet(
-                      deviceName: state.deviceName,
-                      onCancel: () => Navigator.of(context).pop(),
-                      onDisconnect: () {
-                        repo.disconnect();
-                        Navigator.of(context).pop(); // Close bottom sheet
-                        Navigator.of(context).pop(); // Go back to dashboard
-                      },
-                    ),
-                  );
-                },
-              ),
+              if (isConnected)
+                AppButton(
+                  text: 'Disconnect device',
+                  icon: const Icon(
+                    Icons.bluetooth_disabled,
+                    color: Colors.white,
+                  ),
+                  bgColor: const Color(0xFFD32F2F),
+                  textColor: Colors.white,
+                  borderRadius: 24.r,
+                  onPressed: () {
+                    DialogSheet.showCustom(
+                      context,
+                      child: DisconnectBottomSheet(
+                        deviceName: state.deviceName,
+                        onCancel: () => Navigator.of(context).pop(),
+                        onDisconnect: () async {
+                          Navigator.of(context).pop(); // Close bottom sheet
+                          await ref
+                              .read(dashboardProvider.notifier)
+                              .disconnect();
+                          Toasts.showSuccess(
+                            'Disconnected from ${state.deviceName}',
+                          );
+                        },
+                      ),
+                    );
+                  },
+                )
+              else
+                AppButton(
+                  text: 'Connect device',
+                  icon: const Icon(
+                    Icons.bluetooth_connected,
+                    color: Colors.white,
+                  ),
+                  borderRadius: 24.r,
+                  onPressed: () async {
+                    final reconnected = await ref
+                        .read(dashboardProvider.notifier)
+                        .reconnect();
+                    if (reconnected) {
+                      Toasts.showSuccess('Connected to ${state.deviceName}');
+                    } else if (context.mounted) {
+                      await Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (context) => const DevicePairingView(),
+                        ),
+                      );
+                    }
+                  },
+                ),
 
               24.verticalSpace,
               const DeviceActionsCard(),
@@ -213,7 +234,18 @@ class ProfileView extends ConsumerWidget {
                 borderRadius: 24.r,
                 onPressed: () => _showLogoutSheet(context, ref),
               ),
-              32.verticalSpace,
+              20.verticalSpace,
+              Center(
+                child: Text(
+                  'CHORD Companion App v${ChordBleConstants.appVersion}',
+                  style: TextStyle(
+                    fontSize: 12.spMin,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              24.verticalSpace,
             ],
           ),
         ),

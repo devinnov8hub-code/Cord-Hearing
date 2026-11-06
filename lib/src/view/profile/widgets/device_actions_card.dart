@@ -1,22 +1,56 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
-import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
+import 'package:cord_hearing/src/core/services/chord_ota_service.dart';
 import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
+import 'package:cord_hearing/src/view/profile/widgets/ota_update_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class DeviceActionsCard extends ConsumerWidget {
+class DeviceActionsCard extends ConsumerStatefulWidget {
   const DeviceActionsCard({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeviceActionsCard> createState() => _DeviceActionsCardState();
+}
+
+class _DeviceActionsCardState extends ConsumerState<DeviceActionsCard> {
+  int _fwTapCount = 0;
+  DateTime? _lastFwTap;
+
+  void _onFirmwareRowTap() {
+    final now = DateTime.now();
+    if (_lastFwTap == null ||
+        now.difference(_lastFwTap!) > const Duration(seconds: 3)) {
+      _fwTapCount = 1;
+    } else {
+      _fwTapCount++;
+    }
+    _lastFwTap = now;
+
+    if (_fwTapCount >= 5) {
+      _fwTapCount = 0;
+      final current = ref.read(developerOtaUnlockedProvider);
+      ref.read(developerOtaUnlockedProvider.notifier).state = !current;
+      Toasts.showSuccess(
+        !current
+            ? 'Developer firmware file installer enabled'
+            : 'Developer firmware file installer hidden',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final controller = ref.read(dashboardProvider.notifier);
     final state = ref.watch(dashboardProvider);
-    final repo = ref.read(deviceRepositoryProvider);
-    final isConnected =
-        state.isConnected || repo.isConnected || repo.connectedDevice != null;
+    final isConnected = state.isConnected;
+    final cleanFw = state.firmwareVersion.trim();
+    final cleanModel = state.model.trim();
+    final cleanHwRev = state.hardwareRevision.trim();
+    final cleanMfg = state.manufacturer.trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,51 +101,59 @@ class DeviceActionsCard extends ConsumerWidget {
                 ],
               ),
               16.verticalSpace,
-              _buildDiagRow(
-                'Firmware Version',
-                state.firmwareVersion.isNotEmpty
-                    ? 'v${state.firmwareVersion}'
-                    : 'v0.3.0',
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _onFirmwareRowTap,
+                child: _buildDiagRow(
+                  'Firmware Version',
+                  cleanFw.isNotEmpty ? 'v$cleanFw' : '—',
+                ),
               ),
               _buildDiagRow(
                 'Hardware Model',
-                state.model.isNotEmpty ? state.model : 'nRF5340 Body Unit',
+                cleanModel.isNotEmpty ? cleanModel : '—',
               ),
               _buildDiagRow(
                 'Hardware Revision',
-                state.hardwareRevision.isNotEmpty
-                    ? state.hardwareRevision
-                    : 'nRF5340-DK (0x2A27)',
+                cleanHwRev.isNotEmpty ? cleanHwRev : '—',
               ),
               _buildDiagRow(
                 'Manufacturer',
-                state.manufacturer.isNotEmpty
-                    ? state.manufacturer
-                    : 'ChipMango Limited',
+                cleanMfg.isNotEmpty ? cleanMfg : '—',
               ),
               _buildDiagRow(
                 'DSP Earpiece State',
-                state.earpieceState.label,
-                highlight: state.earpieceState == ChordEarpieceState.failed,
+                isConnected ? state.earpieceState.label : '—',
+                highlight:
+                    isConnected &&
+                    state.earpieceState == ChordEarpieceState.failed,
               ),
               _buildDiagRow(
                 'Active Fault Code',
-                state.faultCode.hasFault
-                    ? state.faultCode.screenLabel
-                    : 'None (OK)',
-                highlight: state.faultCode.hasFault,
+                isConnected
+                    ? (state.faultCode.hasFault
+                          ? state.faultCode.screenLabel
+                          : 'None (OK)')
+                    : '—',
+                highlight: isConnected && state.faultCode.hasFault,
               ),
               _buildDiagRow(
                 'Audio Transport',
-                state.audioTransport.label,
+                isConnected ? state.audioTransport.label : '—',
               ),
               _buildDiagRow(
                 'Power & Charging',
-                '${state.batteryLevel}% (${state.chargingStatus.label})',
+                isConnected
+                    ? '${state.batteryLevel}% (${state.chargingStatus.label})'
+                    : '—',
               ),
               _buildDiagRow(
                 'Telemetry Status',
-                state.deviceStatus.label,
+                isConnected ? state.deviceStatus.label : '—',
+              ),
+              _buildDiagRow(
+                'App Build Version',
+                'v${ChordBleConstants.appVersion}',
               ),
             ],
           ),
@@ -193,9 +235,9 @@ class DeviceActionsCard extends ConsumerWidget {
                 context,
                 icon: Icons.system_update_alt,
                 title: 'Check Firmware Update',
-                subtitle: 'Verify SMP MCUboot firmware updates over BLE',
+                subtitle: 'Verify or install SMP MCUboot firmware over BLE',
                 isEnabled: isConnected,
-                onTap: () => _handleOtaCheck(context, state),
+                onTap: () => _handleOtaCheck(context),
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
 
@@ -334,107 +376,16 @@ class DeviceActionsCard extends ConsumerWidget {
     );
   }
 
-  void _handleOtaCheck(BuildContext context, DashboardState state) {
-    // Check preconditions per spec page 4:
-    // 1. Don't start if battery is under 30%
-    if (state.batteryLevel > 0 && state.batteryLevel < 30) {
-      Toasts.showError(
-        'Firmware update blocked: Battery is at ${state.batteryLevel}%. Must be at least 30%.',
-      );
-      return;
-    }
-    // 2. Don't start if device is streaming (Connection status = 2)
-    if (state.isStreamingAudio) {
-      Toasts.showError(
-        'Firmware update blocked: Audio is currently streaming. Please pause audio playback first.',
-      );
-      return;
-    }
-
-    final currentVer = state.firmwareVersion.isNotEmpty
-        ? state.firmwareVersion
-        : '0.3.0';
-
-    showDialog<void>(
+  void _handleOtaCheck(BuildContext context) {
+    ref.read(chordOtaProvider.notifier).resetState();
+    showModalBottomSheet<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        title: Row(
-          children: [
-            const Icon(
-              Icons.system_update_alt,
-              color: AppColors.primaryColor,
-            ),
-            8.horizontalSpace,
-            const Text('Firmware Status'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hardware: ${state.hardwareRevision.isNotEmpty ? state.hardwareRevision : (state.model.isNotEmpty ? state.model : 'nRF5340 Development Kit')}',
-              style: TextStyle(
-                fontSize: 13.spMin,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            4.verticalSpace,
-            Text(
-              'Current Installed: v$currentVer',
-              style: TextStyle(
-                fontSize: 13.spMin,
-                color: Colors.grey[700],
-              ),
-            ),
-            8.verticalSpace,
-            Container(
-              padding: const EdgeInsets.all(12).r,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: const Color(0xFF86EFAC)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle_outline,
-                    color: Color(0xFF16A34A),
-                  ),
-                  8.horizontalSpace,
-                  Expanded(
-                    child: Text(
-                      'Your CHORD device is running the latest firmware release (v$currentVer).',
-                      style: TextStyle(
-                        fontSize: 12.spMin,
-                        color: const Color(0xFF166534),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            12.verticalSpace,
-            Text(
-              'OTA updates use Nordic SMP (mcumgr) protocol with MCUboot image swapping.',
-              style: TextStyle(
-                fontSize: 11.spMin,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
+      builder: (context) => const OtaUpdateSheet(),
     );
   }
 
@@ -473,11 +424,19 @@ class DeviceActionsCard extends ConsumerWidget {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
+    // When disabled (offline), both regular and destructive buttons are greyed out
+    final activeColor = !isEnabled
+        ? Colors.grey
+        : (isDestructive ? Colors.red : const Color(0xFF2BA9E0));
+    final titleColor = !isEnabled
+        ? Colors.grey[600]!
+        : (isDestructive ? Colors.red : Colors.black87);
+
     return InkWell(
       onTap: () {
         if (!isEnabled) {
           Toasts.showError(
-            'CHORD device is not connected. Please connect your device first.',
+            'CHORD device is offline. Connect your device first.',
           );
           return;
         }
@@ -493,15 +452,13 @@ class DeviceActionsCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8).r,
                 decoration: BoxDecoration(
-                  color: isDestructive
-                      ? Colors.red.withValues(alpha: 0.1)
-                      : const Color(0xFF2BA9E0).withValues(alpha: 0.1),
+                  color: activeColor.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   icon,
                   size: 20.spMin,
-                  color: isDestructive ? Colors.red : const Color(0xFF2BA9E0),
+                  color: activeColor,
                 ),
               ),
               12.horizontalSpace,
@@ -514,7 +471,7 @@ class DeviceActionsCard extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 14.spMin,
                         fontWeight: FontWeight.w600,
-                        color: isDestructive ? Colors.red : Colors.black87,
+                        color: titleColor,
                       ),
                     ),
                     2.verticalSpace,

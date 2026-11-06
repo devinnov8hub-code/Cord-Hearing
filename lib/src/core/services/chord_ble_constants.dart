@@ -22,17 +22,20 @@ class ChordBleConstants {
 
   /// Standard Battery Service (0x180F)
   static final Guid batteryServiceUuid = Guid('180f');
-  static final Guid batteryServiceUuid128 =
-      Guid('0000180f-0000-1000-8000-00805f9b34fb');
+  static final Guid batteryServiceUuid128 = Guid(
+    '0000180f-0000-1000-8000-00805f9b34fb',
+  );
 
   /// Standard Device Information Service (0x180A)
   static final Guid deviceInformationServiceUuid = Guid('180a');
-  static final Guid deviceInformationServiceUuid128 =
-      Guid('0000180a-0000-1000-8000-00805f9b34fb');
+  static final Guid deviceInformationServiceUuid128 = Guid(
+    '0000180a-0000-1000-8000-00805f9b34fb',
+  );
 
   /// SMP Service for OTA updates (mcumgr)
-  static final Guid smpServiceUuid =
-      Guid('8d53dc1d-1db7-4cd3-868b-8a527460aa84');
+  static final Guid smpServiceUuid = Guid(
+    '8d53dc1d-1db7-4cd3-868b-8a527460aa84',
+  );
 
   // --- Custom Characteristics ---
   /// Volume: 1-10 (Read, Write, Notify)
@@ -65,7 +68,9 @@ class ChordBleConstants {
   /// Mute: 0 unmuted, 1 muted (Read, Write, Notify)
   static final Guid muteCharacteristicUuid = customGuid('000d');
 
-  /// Firmware version: UTF-8 text e.g. 0.3.0 (Read)
+  static const String appVersion = '1.1.0+2';
+
+  /// Firmware version: 3 raw bytes {major, minor, patch}, e.g. 00 03 00 -> v0.3.0 (Read)
   static final Guid firmwareVersionCharacteristicUuid = customGuid('000e');
 
   /// Earpiece (DSP) state: 0 off, 1 booting, 2 ready, 3 recovering, 4 failed (Read, Notify)
@@ -77,37 +82,45 @@ class ChordBleConstants {
   // --- Standard Characteristics ---
   /// Battery Level: 0-100% (Read, Notify)
   static final Guid batteryLevelCharacteristicUuid = Guid('2a19');
-  static final Guid batteryLevelCharacteristicUuid128 =
-      Guid('00002a19-0000-1000-8000-00805f9b34fb');
+  static final Guid batteryLevelCharacteristicUuid128 = Guid(
+    '00002a19-0000-1000-8000-00805f9b34fb',
+  );
 
   /// Manufacturer Name String (Read)
   static final Guid manufacturerNameCharacteristicUuid = Guid('2a29');
-  static final Guid manufacturerNameCharacteristicUuid128 =
-      Guid('00002a29-0000-1000-8000-00805f9b34fb');
+  static final Guid manufacturerNameCharacteristicUuid128 = Guid(
+    '00002a29-0000-1000-8000-00805f9b34fb',
+  );
 
   /// Model Number String (Read)
   static final Guid modelNumberCharacteristicUuid = Guid('2a24');
-  static final Guid modelNumberCharacteristicUuid128 =
-      Guid('00002a24-0000-1000-8000-00805f9b34fb');
+  static final Guid modelNumberCharacteristicUuid128 = Guid(
+    '00002a24-0000-1000-8000-00805f9b34fb',
+  );
 
   /// Hardware Revision String (Read)
   static final Guid hardwareRevisionCharacteristicUuid = Guid('2a27');
-  static final Guid hardwareRevisionCharacteristicUuid128 =
-      Guid('00002a27-0000-1000-8000-00805f9b34fb');
+  static final Guid hardwareRevisionCharacteristicUuid128 = Guid(
+    '00002a27-0000-1000-8000-00805f9b34fb',
+  );
 
-  /// Match helper for 16-bit / 128-bit UUIDs
+  /// Exact match helper for standard 16-bit / 128-bit Bluetooth SIG UUIDs
   static bool matches(Guid actual, String shortHex) {
     final a = actual.str.toLowerCase();
     final s = shortHex.toLowerCase();
-    return a == s ||
-        a == '0000$s-0000-1000-8000-00805f9b34fb' ||
-        a.contains(s);
+    return a == s || a == '0000$s-0000-1000-8000-00805f9b34fb';
   }
 
-  static bool isChordService(Guid uuid) {
-    final s = uuid.str.toLowerCase();
-    return uuid == chordControlServiceUuid || s.contains('0001');
+  /// Match helper for custom CHORD 9e32XXXX UUIDs
+  static bool matchesCustom(Guid actual, String xxxx) {
+    final a = actual.str.toLowerCase();
+    final code = xxxx.toLowerCase();
+    return a == '$baseUuidPrefix$code$baseUuidSuffix' ||
+        a.startsWith('$baseUuidPrefix$code');
   }
+
+  static bool isChordService(Guid uuid) =>
+      uuid == chordControlServiceUuid || matchesCustom(uuid, '0001');
 
   static bool isBatteryService(Guid uuid) =>
       uuid == batteryServiceUuid ||
@@ -139,9 +152,42 @@ class ChordBleConstants {
       uuid == hardwareRevisionCharacteristicUuid128 ||
       matches(uuid, '2a27');
 
+  static bool isSmpService(Guid uuid) {
+    final s = uuid.str.toLowerCase();
+    return uuid == smpServiceUuid || s.startsWith('8d53dc1d');
+  }
+
+  static bool isSmpChar(Guid uuid) {
+    final s = uuid.str.toLowerCase();
+    return uuid == smpCharacteristicUuid || s.startsWith('da2e7828');
+  }
+
+  /// Formats the 3-byte binary firmware version {major, minor, patch} from
+  /// characteristic 9e32000e (e.g., [0x00, 0x03, 0x00] -> '0.3.0').
+  /// Also handles printable ASCII strings if a build ever returns text.
+  static String formatFirmwareVersion(List<int> bytes) {
+    if (bytes.isEmpty) return '';
+    if (bytes.length == 3 && bytes.any((b) => b < 0x20)) {
+      return '${bytes[0]}.${bytes[1]}.${bytes[2]}';
+    }
+    final printable = bytes.where((b) => b >= 0x20 && b <= 0x7E).toList();
+    if (printable.isEmpty) {
+      if (bytes.length >= 3) {
+        return '${bytes[0]}.${bytes[1]}.${bytes[2]}';
+      }
+      return '';
+    }
+    var str = String.fromCharCodes(printable).trim();
+    if (str.startsWith('v') || str.startsWith('V')) {
+      str = str.substring(1).trim();
+    }
+    return str;
+  }
+
   /// SMP Characteristic (Write Without Response, Notify)
-  static final Guid smpCharacteristicUuid =
-      Guid('da2e7828-fbce-4e01-ae9e-261174997c48');
+  static final Guid smpCharacteristicUuid = Guid(
+    'da2e7828-fbce-4e01-ae9e-261174997c48',
+  );
 
   // Audio services that must NEVER be written to by the mobile app:
   static const int ashaServiceShortUuid = 0xFDF0;
@@ -223,8 +269,18 @@ enum ChordMicMode {
 /// Active Hearing Profiles (Characteristic 0005)
 enum ChordProfile {
   normal(1, 'Normal', 'Everyday', 'The fitted sound'),
-  noisy(2, 'Noisy', 'Busy places', 'Less low-frequency noise: low frequencies -6 dB, 500 Hz -3 dB'),
-  music(3, 'Music', 'Full range', 'Fuller low end (+2 dB), flatter mids for rich audio');
+  noisy(
+    2,
+    'Noisy',
+    'Busy places',
+    'Less low-frequency noise: low frequencies -6 dB, 500 Hz -3 dB',
+  ),
+  music(
+    3,
+    'Music',
+    'Full range',
+    'Fuller low end (+2 dB), flatter mids for rich audio',
+  );
 
   const ChordProfile(this.value, this.label, this.subtitle, this.description);
   final int value;
@@ -243,14 +299,49 @@ enum ChordProfile {
 /// Earpiece Fault Codes (Characteristic 0010)
 enum ChordFaultCode {
   none(0, 'None', 'Normal operation', 'No action needed'),
-  f01(1, 'F01 DSP failed', 'The earpiece sound processor failed (general)', 'Try Reboot ear'),
-  f02(2, 'F02 Unplugged', 'No earpiece on the cable', 'Check the cable. Normal while charging; light does not flash red for it'),
-  f03(3, 'F03 No boot', 'The earpiece answers but does not start', 'Try Reboot ear'),
-  f04(4, 'F04 Faulty', 'The earpiece rejects settings and could not be repaired', 'Contact support'),
-  f05(5, 'F05 Mismatch', 'The earpiece runs settings for another firmware version', 'Try Reboot ear (device then rewrites them)'),
-  f06(6, 'F06 Sync error', 'Writing settings to the earpiece failed', 'Try Reboot ear'),
+  f01(
+    1,
+    'F01 DSP failed',
+    'The earpiece sound processor failed (general)',
+    'Try Reboot ear',
+  ),
+  f02(
+    2,
+    'F02 Unplugged',
+    'No earpiece on the cable',
+    'Check the cable. Normal while charging; light does not flash red for it',
+  ),
+  f03(
+    3,
+    'F03 No boot',
+    'The earpiece answers but does not start',
+    'Try Reboot ear',
+  ),
+  f04(
+    4,
+    'F04 Faulty',
+    'The earpiece rejects settings and could not be repaired',
+    'Contact support',
+  ),
+  f05(
+    5,
+    'F05 Mismatch',
+    'The earpiece runs settings for another firmware version',
+    'Try Reboot ear (device then rewrites them)',
+  ),
+  f06(
+    6,
+    'F06 Sync error',
+    'Writing settings to the earpiece failed',
+    'Try Reboot ear',
+  ),
   f07(7, 'F07 Link error', 'Errors on the cable data lines', 'Check the cable'),
-  f08(8, 'F08 Link lost', 'The earpiece stopped answering while running', 'Check the cable'),
+  f08(
+    8,
+    'F08 Link lost',
+    'The earpiece stopped answering while running',
+    'Check the cable',
+  ),
   unknown(-1, 'Fault', 'General device fault', 'Contact support');
 
   const ChordFaultCode(this.code, this.screenLabel, this.meaning, this.action);
