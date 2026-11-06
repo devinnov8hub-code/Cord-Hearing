@@ -1,5 +1,4 @@
 import 'package:cord_hearing/src/view/authentication/splash_view.dart';
-import 'package:flutter/cupertino.dart';
 // import 'package:cord_hearing/src/view/splash_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -23,6 +22,7 @@ class CordHearing extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           home: const SplashView(),
           theme: ThemeData(
+            fontFamily: 'DM Sans',
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: <TargetPlatform, PageTransitionsBuilder>{
                 TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),

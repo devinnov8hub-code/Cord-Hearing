@@ -80,16 +80,16 @@ class ProfileView extends ConsumerWidget {
           ),
         ),
         centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: () => _showLogoutSheet(context, ref),
-            tooltip: 'Log Out',
-            icon: const Icon(
-              Icons.logout_rounded,
-              color: Color(0xFFD32F2F),
-            ),
-          ),
-          8.horizontalSpace,
+        actions: const [
+          // IconButton(
+          //   onPressed: () => _showLogoutSheet(context, ref),
+          //   tooltip: 'Log Out',
+          //   icon: const Icon(
+          //     Icons.logout_rounded,
+          //     color: Color(0xFFD32F2F),
+          //   ),
+          // ),
+          // 8.horizontalSpace,
         ],
       ),
       body: SafeArea(
@@ -100,7 +100,31 @@ class ProfileView extends ConsumerWidget {
             children: [
               ProfileInfoCard(deviceName: state.deviceName),
               24.verticalSpace,
+              AppButton(
+                text: 'Disconnect device',
+                icon: const Icon(Icons.bluetooth_disabled, color: Colors.white),
+                bgColor: const Color(0xFFD32F2F),
+                textColor: Colors.white,
+                borderRadius: 24.r,
+                onPressed: () {
+                  DialogSheet.showCustom(
+                    context,
+                    child: DisconnectBottomSheet(
+                      deviceName: state.deviceName,
+                      onCancel: () => Navigator.of(context).pop(),
+                      onDisconnect: () {
+                        repo.disconnect();
+                        Navigator.of(context).pop(); // Close bottom sheet
+                        Navigator.of(context).pop(); // Go back to dashboard
+                      },
+                    ),
+                  );
+                },
+              ),
+
+              24.verticalSpace,
               const DeviceActionsCard(),
+
               24.verticalSpace,
               // CHORD Device Help & Guides Card (Spec Section 3, 5, 8, 12)
               Container(
@@ -172,28 +196,6 @@ class ProfileView extends ConsumerWidget {
                     ),
                   ],
                 ),
-              ),
-              24.verticalSpace,
-              AppButton(
-                text: 'Disconnect device',
-                icon: const Icon(Icons.bluetooth_disabled, color: Colors.white),
-                bgColor: const Color(0xFFD32F2F),
-                textColor: Colors.white,
-                borderRadius: 24.r,
-                onPressed: () {
-                  DialogSheet.showCustom(
-                    context,
-                    child: DisconnectBottomSheet(
-                      deviceName: state.deviceName,
-                      onCancel: () => Navigator.of(context).pop(),
-                      onDisconnect: () {
-                        repo.disconnect();
-                        Navigator.of(context).pop(); // Close bottom sheet
-                        Navigator.of(context).pop(); // Go back to dashboard
-                      },
-                    ),
-                  );
-                },
               ),
               32.verticalSpace,
               const PreviouslyPairedList(),

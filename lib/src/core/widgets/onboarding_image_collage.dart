@@ -8,7 +8,7 @@ class OnboardingImageCollage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8).r,
       child: Column(
         children: [
@@ -18,38 +18,29 @@ class OnboardingImageCollage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 24).r,
-                    child: _ImageCard(imageUrl: AppAssets.onboardingGrid(1)),
-                  ),
+                  child: _ImageCard(imageUrl: AppAssets.onboardingGrid(1)),
                 ),
                 4.horizontalSpace,
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 24).r,
-                    child: _ImageCard(imageUrl: AppAssets.onboardingGrid(2)),
-                  ),
+                  child: _ImageCard(imageUrl: AppAssets.onboardingGrid(2)),
                 ),
                 4.horizontalSpace,
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12, bottom: 12).r,
-                    child: _ImageCard(imageUrl: AppAssets.onboardingGrid(3)),
-                  ),
+                  child: _ImageCard(imageUrl: AppAssets.onboardingGrid(3)),
                 ),
               ],
             ),
           ),
           4.verticalSpace,
           Expanded(
-            flex: 6,
+            flex: 9,
             child: Row(
               children: [
                 Expanded(
                   flex: 5,
                   child: _ImageCard(imageUrl: AppAssets.onboardingGrid(4)),
                 ),
-                SizedBox(width: 8.w),
+                8.horizontalSpace,
                 Expanded(
                   flex: 4,
                   child: Column(
@@ -85,7 +76,7 @@ class _ImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32.r),
+        borderRadius: BorderRadius.circular(24.r),
         color: AppColors.grey.withValues(alpha: 0.2),
         image: DecorationImage(image: AssetImage(imageUrl), fit: BoxFit.cover),
       ),

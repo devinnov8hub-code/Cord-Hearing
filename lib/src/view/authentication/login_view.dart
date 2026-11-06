@@ -34,29 +34,46 @@ class LoginView extends StatelessWidget {
           ),
           child: SafeArea(
             bottom: false,
-            child: Column(
+            child: Stack(
               children: [
-                const Expanded(flex: 2, child: OnboardingImageCollage()),
-                Expanded(
-                  flex: 3,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight,
-                          ),
-                          child: IntrinsicHeight(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                              ).r,
+                Positioned(
+                  bottom: MediaQuery.of(context).size.height * 0.6,
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: const OnboardingImageCollage(),
+                ),
+
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  top: MediaQuery.of(context).size.height * 0.04,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                    ).r,
+                    alignment: Alignment.bottomCenter,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage(AppAssets.authBackground),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: IntrinsicHeight(
                               child: const _LoginContent(),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -123,7 +140,7 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
     final isLoading = loginState.isLoading;
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,6 +180,7 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
             ),
           ],
         ),
+        32.verticalSpace,
         Column(
           children: [
             AppTextField(
@@ -189,6 +207,7 @@ class _LoginContentState extends ConsumerState<_LoginContent> {
             ),
           ],
         ),
+        58.verticalSpace,
         Column(
           children: [
             if (isLoading)

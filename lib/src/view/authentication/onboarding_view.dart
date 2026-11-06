@@ -25,14 +25,34 @@ class OnboardingView extends StatelessWidget {
         ),
         child: SafeArea(
           bottom: false,
-          child: Column(
+          child: Stack(
             children: [
-              const Expanded(flex: 2, child: OnboardingImageCollage()),
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20).r,
-                  child: const _OnboardingContent(),
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.4,
+                left: 0,
+                right: 0,
+                top: 0,
+                child: const OnboardingImageCollage(),
+              ),
+
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                top: MediaQuery.of(context).size.height * 0.2,
+                child: Container(
+                  // clipBehavior: Clip.antiAlias,
+                  alignment: Alignment.bottomCenter,
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage(AppAssets.authBackground),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20).r,
+                    child: const _OnboardingContent(),
+                  ),
                 ),
               ),
             ],
@@ -82,9 +102,9 @@ class _OnboardingContentState extends State<_OnboardingContent> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        20.verticalSpace,
+        // 20.verticalSpace,
         Row(
           children: [
             SvgPicture.asset(
@@ -151,6 +171,7 @@ class _OnboardingContentState extends State<_OnboardingContent> {
             );
           }),
         ),
+        32.verticalSpace,
         Column(
           children: [
             AppButton(
