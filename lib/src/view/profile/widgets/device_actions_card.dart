@@ -15,9 +15,8 @@ class DeviceActionsCard extends ConsumerWidget {
     final controller = ref.read(dashboardProvider.notifier);
     final state = ref.watch(dashboardProvider);
     final repo = ref.read(deviceRepositoryProvider);
-    final isConnected = state.isConnected ||
-        repo.isConnected ||
-        repo.connectedDevice != null;
+    final isConnected =
+        state.isConnected || repo.isConnected || repo.connectedDevice != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,8 +92,7 @@ class DeviceActionsCard extends ConsumerWidget {
               _buildDiagRow(
                 'DSP Earpiece State',
                 state.earpieceState.label,
-                highlight:
-                    state.earpieceState == ChordEarpieceState.failed,
+                highlight: state.earpieceState == ChordEarpieceState.failed,
               ),
               _buildDiagRow(
                 'Active Fault Code',
@@ -149,7 +147,9 @@ class DeviceActionsCard extends ConsumerWidget {
                 isEnabled: isConnected,
                 onTap: () {
                   controller.sync();
-                  Toasts.showSuccess('Device telemetry synchronized with CHORD');
+                  Toasts.showSuccess(
+                    'Device telemetry synchronized with CHORD',
+                  );
                 },
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
@@ -351,8 +351,9 @@ class DeviceActionsCard extends ConsumerWidget {
       return;
     }
 
-    final currentVer =
-        state.firmwareVersion.isNotEmpty ? state.firmwareVersion : '0.3.0';
+    final currentVer = state.firmwareVersion.isNotEmpty
+        ? state.firmwareVersion
+        : '0.3.0';
 
     showDialog<void>(
       context: context,
@@ -453,7 +454,7 @@ class DeviceActionsCard extends ConsumerWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 13.spMin,
+              fontSize: 12.spMin,
               fontWeight: FontWeight.w600,
               color: highlight ? Colors.red : Colors.black87,
             ),

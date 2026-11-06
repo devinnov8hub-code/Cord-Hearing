@@ -1,9 +1,11 @@
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
+import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class HearingProfileCard extends ConsumerWidget {
   const HearingProfileCard({super.key});
@@ -57,21 +59,21 @@ class HearingProfileCard extends ConsumerWidget {
             children: [
               _buildProfileButton(
                 profile: ChordProfile.normal,
-                icon: Icons.nature_people,
+                icon: AppAssets.earIcon,
                 current: state.profile,
                 onTap: () => controller.setProfile(ChordProfile.normal),
               ),
               8.horizontalSpace,
               _buildProfileButton(
                 profile: ChordProfile.noisy,
-                icon: Icons.restaurant,
+                icon: AppAssets.waveformIcon,
                 current: state.profile,
                 onTap: () => controller.setProfile(ChordProfile.noisy),
               ),
               8.horizontalSpace,
               _buildProfileButton(
                 profile: ChordProfile.music,
-                icon: Icons.music_note,
+                icon: AppAssets.musicNoteIcon,
                 current: state.profile,
                 onTap: () => controller.setProfile(ChordProfile.music),
               ),
@@ -114,11 +116,12 @@ class HearingProfileCard extends ConsumerWidget {
 
   Widget _buildProfileButton({
     required ChordProfile profile,
-    required IconData icon,
+    required String icon,
     required ChordProfile current,
     required VoidCallback onTap,
   }) {
     final isSelected = profile == current;
+    final Color whiteColor = Color.fromRGBO(255, 255, 255, 1);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -126,7 +129,7 @@ class HearingProfileCard extends ConsumerWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4).r,
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryColor : Colors.white,
+            color: isSelected ? AppColors.primaryColor : whiteColor,
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
               color: isSelected
@@ -146,10 +149,13 @@ class HearingProfileCard extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              SvgPicture.asset(
                 icon,
-                color: isSelected ? Colors.white : Colors.black87,
-                size: 20.spMin,
+                colorFilter: ColorFilter.mode(
+                  isSelected ? whiteColor : Colors.black87,
+                  BlendMode.srcIn,
+                ),
+                width: 20.spMin,
               ),
               4.verticalSpace,
               Text(
@@ -166,7 +172,7 @@ class HearingProfileCard extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 10.spMin,
                   fontWeight: FontWeight.w400,
-                  color: isSelected ? Colors.white70 : Colors.grey[600],
+                  color: isSelected ? whiteColor : Colors.grey[600],
                 ),
                 textAlign: TextAlign.center,
               ),

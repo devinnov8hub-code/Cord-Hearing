@@ -15,4 +15,8 @@ class AppAssets {
 
   static String onboardingGrid(int val) =>
       '$_basePath/onboarding_grid_$val.png';
+
+  static const String earIcon = '$_basePath/ear-icon.svg';
+  static const String musicNoteIcon = '$_basePath/music-note-icon.svg';
+  static const String waveformIcon = '$_basePath/waveform-icon.svg';
 }

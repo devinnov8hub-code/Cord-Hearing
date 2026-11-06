@@ -23,6 +23,7 @@ class CordHearing extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           home: const SplashView(),
           theme: ThemeData(
+            fontFamily: 'DM Sans',
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: <TargetPlatform, PageTransitionsBuilder>{
                 TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
