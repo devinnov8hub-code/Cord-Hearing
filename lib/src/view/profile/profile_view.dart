@@ -80,7 +80,7 @@ class ProfileView extends ConsumerWidget {
           ),
         ),
         centerTitle: false,
-        actions: [
+        actions: const [
           // IconButton(
           //   onPressed: () => _showLogoutSheet(context, ref),
           //   tooltip: 'Log Out',

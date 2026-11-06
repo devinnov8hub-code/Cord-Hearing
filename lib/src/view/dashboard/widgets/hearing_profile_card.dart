@@ -121,7 +121,7 @@ class HearingProfileCard extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     final isSelected = profile == current;
-    final Color whiteColor = Color.fromRGBO(255, 255, 255, 1);
+    const whiteColor = Color.fromRGBO(255, 255, 255, 1);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
