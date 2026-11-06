@@ -8,7 +8,7 @@ class OnboardingImageCollage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8).r,
       child: Column(
         children: [

@@ -27,20 +27,26 @@ class OnboardingView extends StatelessWidget {
           bottom: false,
           child: Stack(
             children: [
-              const OnboardingImageCollage(),
               Positioned(
-                bottom: 0,
-                top: 0,
+                bottom: MediaQuery.of(context).size.height * 0.4,
                 left: 0,
                 right: 0,
+                top: 0,
+                child: const OnboardingImageCollage(),
+              ),
+
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                top: MediaQuery.of(context).size.height * 0.2,
                 child: Container(
-                  height: 200,
-                  clipBehavior: Clip.antiAlias,
+                  // clipBehavior: Clip.antiAlias,
                   alignment: Alignment.bottomCenter,
                   decoration: const BoxDecoration(
                     image: DecorationImage(
-                      alignment: AlignmentGeometry.bottomCenter,
                       image: AssetImage(AppAssets.authBackground),
+                      fit: BoxFit.cover,
                     ),
                   ),
                   child: Padding(
@@ -96,7 +102,6 @@ class _OnboardingContentState extends State<_OnboardingContent> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      // mainAxisAlignment: MainAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
         // 20.verticalSpace,
