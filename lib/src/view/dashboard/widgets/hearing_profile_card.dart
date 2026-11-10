@@ -46,10 +46,15 @@ class HearingProfileCard extends ConsumerWidget {
                 ],
               ),
               Text(
-                'Synced with OS presets',
+                state.isConnected ? 'Synced with OS presets' : 'Disconnected',
                 style: TextStyle(
                   fontSize: 11.spMin,
-                  color: Colors.grey[600],
+                  color: state.isConnected
+                      ? Colors.grey[600]
+                      : const Color(0xFFD32F2F),
+                  fontWeight: state.isConnected
+                      ? FontWeight.normal
+                      : FontWeight.w600,
                 ),
               ),
             ],
@@ -58,23 +63,29 @@ class HearingProfileCard extends ConsumerWidget {
           Row(
             children: [
               _buildProfileButton(
+                key: const Key('profile_normal_button'),
                 profile: ChordProfile.normal,
                 icon: AppAssets.earIcon,
                 current: state.profile,
+                isConnected: state.isConnected,
                 onTap: () => controller.setProfile(ChordProfile.normal),
               ),
               8.horizontalSpace,
               _buildProfileButton(
+                key: const Key('profile_noisy_button'),
                 profile: ChordProfile.noisy,
                 icon: AppAssets.waveformIcon,
                 current: state.profile,
+                isConnected: state.isConnected,
                 onTap: () => controller.setProfile(ChordProfile.noisy),
               ),
               8.horizontalSpace,
               _buildProfileButton(
+                key: const Key('profile_music_button'),
                 profile: ChordProfile.music,
                 icon: AppAssets.musicNoteIcon,
                 current: state.profile,
+                isConnected: state.isConnected,
                 onTap: () => controller.setProfile(ChordProfile.music),
               ),
             ],
@@ -115,68 +126,75 @@ class HearingProfileCard extends ConsumerWidget {
   }
 
   Widget _buildProfileButton({
+    required Key key,
     required ChordProfile profile,
     required String icon,
     required ChordProfile current,
     required VoidCallback onTap,
+    required bool isConnected,
   }) {
     final isSelected = profile == current;
     const whiteColor = Color.fromRGBO(255, 255, 255, 1);
     return Expanded(
       child: GestureDetector(
+        key: key,
         onTap: onTap,
-        child: AnimatedContainer(
+        child: AnimatedOpacity(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4).r,
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryColor : whiteColor,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.primaryColor
-                  : Colors.grey.withValues(alpha: 0.3),
+          opacity: isConnected ? 1.0 : 0.6,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4).r,
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primaryColor : whiteColor,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.primaryColor
+                    : Colors.grey.withValues(alpha: 0.3),
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primaryColor.withValues(alpha: 0.25),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primaryColor.withValues(alpha: 0.25),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SvgPicture.asset(
-                icon,
-                colorFilter: ColorFilter.mode(
-                  isSelected ? whiteColor : Colors.black87,
-                  BlendMode.srcIn,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  icon,
+                  colorFilter: ColorFilter.mode(
+                    isSelected ? whiteColor : Colors.black87,
+                    BlendMode.srcIn,
+                  ),
+                  width: 20.spMin,
                 ),
-                width: 20.spMin,
-              ),
-              4.verticalSpace,
-              Text(
-                profile.label,
-                style: TextStyle(
-                  fontSize: 12.spMin,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : Colors.black87,
+                4.verticalSpace,
+                Text(
+                  profile.label,
+                  style: TextStyle(
+                    fontSize: 12.spMin,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : Colors.black87,
+                  ),
                 ),
-              ),
-              2.verticalSpace,
-              Text(
-                profile.subtitle,
-                style: TextStyle(
-                  fontSize: 10.spMin,
-                  fontWeight: FontWeight.w400,
-                  color: isSelected ? whiteColor : Colors.grey[600],
+                2.verticalSpace,
+                Text(
+                  profile.subtitle,
+                  style: TextStyle(
+                    fontSize: 10.spMin,
+                    fontWeight: FontWeight.w400,
+                    color: isSelected ? whiteColor : Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

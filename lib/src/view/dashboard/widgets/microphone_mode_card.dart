@@ -12,70 +12,80 @@ class MicrophoneModeCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dashboardProvider);
     final controller = ref.read(dashboardProvider.notifier);
+    final isConnected = state.isConnected;
 
-    return Container(
-      padding: const EdgeInsets.all(16).r,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.mic,
-                color: Colors.grey[700],
-                size: 20.spMin,
-              ),
-              8.horizontalSpace,
-              Text(
-                'Microphone mode',
-                style: TextStyle(
-                  fontSize: 14.spMin,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          16.verticalSpace,
-          Container(
-            padding: const EdgeInsets.all(4).r,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(16.r),
-            ),
-            child: Row(
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isConnected ? 1.0 : 0.6,
+      child: Container(
+        padding: const EdgeInsets.all(16).r,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                _buildModeOption(
-                  label: 'Omni',
-                  icon: Icons.mic_none,
-                  isSelected: state.micMode == ChordMicMode.omni,
-                  onTap: () => controller.setMicMode(ChordMicMode.omni),
+                Icon(
+                  Icons.mic,
+                  color: Colors.grey[700],
+                  size: 20.spMin,
                 ),
-                _buildModeOption(
-                  label: 'Directional',
-                  icon: Icons.mic,
-                  isSelected: state.micMode == ChordMicMode.directional,
-                  onTap: () => controller.setMicMode(ChordMicMode.directional),
-                ),
-                _buildModeOption(
-                  label: 'Bypass',
-                  icon: Icons.hearing,
-                  isSelected: state.micMode == ChordMicMode.bypass,
-                  onTap: () => controller.setMicMode(ChordMicMode.bypass),
+                8.horizontalSpace,
+                Text(
+                  'Microphone mode',
+                  style: TextStyle(
+                    fontSize: 14.spMin,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            16.verticalSpace,
+            Container(
+              padding: const EdgeInsets.all(4).r,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              child: Row(
+                children: [
+                  _buildModeOption(
+                    key: const Key('mic_omni_button'),
+                    label: 'Omni',
+                    icon: Icons.mic_none,
+                    isSelected: state.micMode == ChordMicMode.omni,
+                    onTap: () => controller.setMicMode(ChordMicMode.omni),
+                  ),
+                  _buildModeOption(
+                    key: const Key('mic_directional_button'),
+                    label: 'Directional',
+                    icon: Icons.mic,
+                    isSelected: state.micMode == ChordMicMode.directional,
+                    onTap: () =>
+                        controller.setMicMode(ChordMicMode.directional),
+                  ),
+                  _buildModeOption(
+                    key: const Key('mic_bypass_button'),
+                    label: 'Bypass',
+                    icon: Icons.hearing,
+                    isSelected: state.micMode == ChordMicMode.bypass,
+                    onTap: () => controller.setMicMode(ChordMicMode.bypass),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildModeOption({
+    required Key key,
     required String label,
     required IconData icon,
     required bool isSelected,
@@ -83,6 +93,7 @@ class MicrophoneModeCard extends ConsumerWidget {
   }) {
     return Expanded(
       child: GestureDetector(
+        key: key,
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

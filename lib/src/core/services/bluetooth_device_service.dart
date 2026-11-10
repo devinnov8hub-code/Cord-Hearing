@@ -623,7 +623,7 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     BluetoothCharacteristic characteristic,
     void Function(List<int>) onValue,
   ) async {
-    final sub = characteristic.lastValueStream.listen(onValue);
+    final sub = characteristic.onValueReceived.listen(onValue);
     _characteristicSubscriptions.add(sub);
 
     for (var i = 0; i < 4; i++) {
@@ -664,7 +664,9 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     List<int> bytes, {
     int maxRetries = 3,
   }) async {
-    if (characteristic == null) return;
+    if (characteristic == null || !isConnected) {
+      throw StateError('Characteristic not available or device not connected');
+    }
     for (var i = 0; i < maxRetries; i++) {
       try {
         await characteristic.write(bytes);
@@ -722,25 +724,32 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   Future<void> setVolume(int step) async {
     final clamped = step.clamp(1, 10);
     await _safeWriteWithRetry(_volumeChar, [clamped]);
+    _currentVolume = clamped;
+    _volumeController.add(_currentVolume);
   }
 
   @override
   Future<void> setMute(bool mute) async {
     await _safeWriteWithRetry(_muteChar, [if (mute) 1 else 0]);
+    _currentIsMuted = mute;
+    _muteController.add(_currentIsMuted);
   }
 
   @override
   Future<void> setProfile(ChordProfile profile) async {
     await _safeWriteWithRetry(_profileChar, [profile.value]);
+    _currentProfile = profile;
+    _profileController.add(_currentProfile);
   }
 
   @override
   Future<void> setMicMode(ChordMicMode mode) async {
     await _safeWriteWithRetry(_micModeChar, [mode.value]);
+    _currentMicMode = mode;
+    _micModeController.add(_currentMicMode);
   }
 
   Future<void> _sendCommand(int opcode) async {
-    if (_controlPointChar == null) return;
     await _safeWriteWithRetry(_controlPointChar, [opcode]);
   }
 

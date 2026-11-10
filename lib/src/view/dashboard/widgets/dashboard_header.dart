@@ -1,3 +1,4 @@
+import 'package:change_case/change_case.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/view/profile/profile_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,7 +28,7 @@ class DashboardHeader extends StatelessWidget {
             ),
             children: [
               TextSpan(
-                text: displayName,
+                text: displayName.toCapitalCase(),
                 style: const TextStyle(color: Colors.black),
               ),
             ],

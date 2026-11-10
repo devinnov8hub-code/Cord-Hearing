@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/core/services/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardState {
@@ -309,50 +310,140 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
     return connected;
   }
 
-  void setVolume(int vol) {
+  Future<void> setVolume(int vol) async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to adjust volume.');
+      return;
+    }
     if (vol < 1 || vol > 10) return;
+    final previous = state.volume;
     state = state.copyWith(volume: vol);
-    ref.read(deviceRepositoryProvider).setVolume(vol);
+    try {
+      await ref.read(deviceRepositoryProvider).setVolume(vol);
+    } catch (_) {
+      state = state.copyWith(volume: previous);
+      Toasts.showError('Failed to sync volume with CHORD device.');
+    }
   }
 
-  void toggleMute() {
-    final newMute = !state.isMuted;
+  Future<void> toggleMute() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to mute or unmute.');
+      return;
+    }
+    final previous = state.isMuted;
+    final newMute = !previous;
     state = state.copyWith(isMuted: newMute);
-    ref.read(deviceRepositoryProvider).setMute(newMute);
+    try {
+      await ref.read(deviceRepositoryProvider).setMute(newMute);
+    } catch (_) {
+      state = state.copyWith(isMuted: previous);
+      Toasts.showError('Failed to sync mute state with CHORD device.');
+    }
   }
 
-  void setProfile(ChordProfile profile) {
+  Future<void> setProfile(ChordProfile profile) async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to change sound profile.');
+      return;
+    }
+    if (state.profile == profile) return;
+    final previous = state.profile;
     state = state.copyWith(profile: profile);
-    ref.read(deviceRepositoryProvider).setProfile(profile);
+    try {
+      await ref.read(deviceRepositoryProvider).setProfile(profile);
+    } catch (_) {
+      state = state.copyWith(profile: previous);
+      Toasts.showError('Failed to sync sound profile with CHORD device.');
+    }
   }
 
-  void setMicMode(ChordMicMode mode) {
+  Future<void> setMicMode(ChordMicMode mode) async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to change microphone mode.');
+      return;
+    }
+    if (state.micMode == mode) return;
+    final previous = state.micMode;
     state = state.copyWith(micMode: mode);
-    ref.read(deviceRepositoryProvider).setMicMode(mode);
+    try {
+      await ref.read(deviceRepositoryProvider).setMicMode(mode);
+    } catch (_) {
+      state = state.copyWith(micMode: previous);
+      Toasts.showError('Failed to sync mic mode with CHORD device.');
+    }
   }
 
-  void sync() {
-    ref.read(deviceRepositoryProvider).sync();
+  Future<void> sync() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to synchronize.');
+      return;
+    }
+    try {
+      await ref.read(deviceRepositoryProvider).sync();
+    } catch (_) {
+      Toasts.showError('Failed to synchronize with CHORD device.');
+    }
   }
 
-  void rebootDevice() {
-    ref.read(deviceRepositoryProvider).reboot();
+  Future<void> rebootDevice() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to reboot.');
+      return;
+    }
+    try {
+      await ref.read(deviceRepositoryProvider).reboot();
+    } catch (_) {
+      Toasts.showError('Failed to reboot CHORD device.');
+    }
   }
 
-  void factoryReset() {
-    ref.read(deviceRepositoryProvider).factoryReset();
+  Future<void> factoryReset() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to factory reset.');
+      return;
+    }
+    try {
+      await ref.read(deviceRepositoryProvider).factoryReset();
+    } catch (_) {
+      Toasts.showError('Failed to factory reset CHORD device.');
+    }
   }
 
-  void forgetAllPhones() {
-    ref.read(deviceRepositoryProvider).forgetAllPhones();
+  Future<void> forgetAllPhones() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to forget bonded phones.');
+      return;
+    }
+    try {
+      await ref.read(deviceRepositoryProvider).forgetAllPhones();
+    } catch (_) {
+      Toasts.showError('Failed to forget bonded phones on CHORD device.');
+    }
   }
 
-  void powerOff() {
-    ref.read(deviceRepositoryProvider).powerOff();
+  Future<void> powerOff() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to power off.');
+      return;
+    }
+    try {
+      await ref.read(deviceRepositoryProvider).powerOff();
+    } catch (_) {
+      Toasts.showError('Failed to power off CHORD device.');
+    }
   }
 
-  void openPairingMode() {
-    ref.read(deviceRepositoryProvider).openPairingMode();
+  Future<void> openPairingMode() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device to open pairing mode.');
+      return;
+    }
+    try {
+      await ref.read(deviceRepositoryProvider).openPairingMode();
+    } catch (_) {
+      Toasts.showError('Failed to open pairing mode on CHORD device.');
+    }
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
@@ -84,8 +86,10 @@ class DashboardView extends ConsumerWidget {
               const DeviceStatusCard(),
               16.verticalSpace,
               const HearingProfileCard(),
-              16.verticalSpace,
-              const VolumeLevelCard(),
+              if (!Platform.isIOS) ...[
+                16.verticalSpace,
+                const VolumeLevelCard(),
+              ],
               24.verticalSpace,
             ],
           ),

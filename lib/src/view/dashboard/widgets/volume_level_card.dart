@@ -11,171 +11,192 @@ class VolumeLevelCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (Platform.isIOS) {
+      return const SizedBox.shrink();
+    }
+
     final state = ref.watch(dashboardProvider);
     final controller = ref.read(dashboardProvider.notifier);
+    final isConnected = state.isConnected;
 
-    return Container(
-      padding: const EdgeInsets.all(16).r,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    state.isMuted ? Icons.volume_off : Icons.volume_up,
-                    color: state.isMuted ? Colors.red : Colors.grey[700],
-                    size: 20.spMin,
-                  ),
-                  8.horizontalSpace,
-                  Text(
-                    'Phone Audio Volume',
-                    style: TextStyle(
-                      fontSize: 14.spMin,
-                      fontWeight: FontWeight.w600,
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isConnected ? 1.0 : 0.6,
+      child: Container(
+        padding: const EdgeInsets.all(16).r,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      state.isMuted ? Icons.volume_off : Icons.volume_up,
+                      color: state.isMuted ? Colors.red : Colors.grey[700],
+                      size: 20.spMin,
+                    ),
+                    8.horizontalSpace,
+                    Text(
+                      'Phone Audio Volume',
+                      style: TextStyle(
+                        fontSize: 14.spMin,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                GestureDetector(
+                  key: const Key('volume_mute_button'),
+                  onTap: controller.toggleMute,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ).r,
+                    decoration: BoxDecoration(
+                      color: state.isMuted
+                          ? Colors.red.withValues(alpha: 0.15)
+                          : Colors.grey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: state.isMuted ? Colors.red : Colors.transparent,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          state.isMuted ? Icons.volume_off : Icons.volume_up,
+                          size: 14.spMin,
+                          color: state.isMuted ? Colors.red : Colors.black87,
+                        ),
+                        4.horizontalSpace,
+                        Text(
+                          state.isMuted ? 'Muted' : 'Mute',
+                          style: TextStyle(
+                            fontSize: 12.spMin,
+                            fontWeight: FontWeight.w600,
+                            color: state.isMuted ? Colors.red : Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            4.verticalSpace,
+            Text(
+              'Music & calls volume (sound from hearing-aid microphones stays at fitted level).',
+              style: TextStyle(
+                fontSize: 11.spMin,
+                color: Colors.grey[600],
+                height: 1.3,
               ),
-              GestureDetector(
-                onTap: controller.toggleMute,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4).r,
+            ),
+            16.verticalSpace,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  key: const Key('volume_decrement_button'),
+                  onTap: () {
+                    if (!isConnected) {
+                      controller.setVolume(state.volume);
+                    } else if (state.volume > 1) {
+                      controller.setVolume(state.volume - 1);
+                    }
+                  },
+                  child: CircleAvatar(
+                    backgroundColor: isConnected && state.volume > 1
+                        ? AppColors.primaryColor
+                        : Colors.grey.withValues(alpha: 0.3),
+                    radius: 20.r,
+                    child: const Icon(
+                      Icons.remove,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ).r,
                   decoration: BoxDecoration(
-                    color: state.isMuted
-                        ? Colors.red.withValues(alpha: 0.15)
-                        : Colors.grey.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12.r),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20.r),
                     border: Border.all(
-                      color: state.isMuted ? Colors.red : Colors.transparent,
+                      color: Colors.grey.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        state.isMuted ? Icons.volume_off : Icons.volume_up,
-                        size: 14.spMin,
-                        color: state.isMuted ? Colors.red : Colors.black87,
-                      ),
-                      4.horizontalSpace,
                       Text(
-                        state.isMuted ? 'Muted' : 'Mute',
+                        state.isMuted ? 'Muted' : '${state.volume}/10',
                         style: TextStyle(
-                          fontSize: 12.spMin,
-                          fontWeight: FontWeight.w600,
-                          color: state.isMuted ? Colors.red : Colors.black87,
+                          color: state.isMuted
+                              ? Colors.red
+                              : AppColors.primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.spMin,
                         ),
+                      ),
+                      14.horizontalSpace,
+                      Row(
+                        children: List.generate(10, (index) {
+                          final stepNumber = index + 1;
+                          final isActive =
+                              !state.isMuted && stepNumber <= state.volume;
+                          return Container(
+                            width: 4.w,
+                            height: 16.h,
+                            margin: EdgeInsets.only(
+                              right: index < 9 ? 4.w : 0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? AppColors.primaryColor
+                                  : (state.isMuted &&
+                                          stepNumber <= state.volume)
+                                      ? Colors.red.withValues(alpha: 0.4)
+                                      : Colors.grey.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(2.r),
+                            ),
+                          );
+                        }),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          4.verticalSpace,
-          Text(
-            Platform.isIOS
-                ? 'Applies to Android streaming only (hearing-aid microphone gain stays at fitted level).'
-                : 'Music & calls volume (sound from hearing-aid microphones stays at fitted level).',
-            style: TextStyle(
-              fontSize: 11.spMin,
-              color: Colors.grey[600],
-              height: 1.3,
+                GestureDetector(
+                  key: const Key('volume_increment_button'),
+                  onTap: () {
+                    if (!isConnected) {
+                      controller.setVolume(state.volume);
+                    } else if (state.volume < 10) {
+                      controller.setVolume(state.volume + 1);
+                    }
+                  },
+                  child: CircleAvatar(
+                    backgroundColor: isConnected && state.volume < 10
+                        ? AppColors.primaryColor
+                        : Colors.grey.withValues(alpha: 0.3),
+                    radius: 20.r,
+                    child: const Icon(Icons.add, color: Colors.white),
+                  ),
+                ),
+              ],
             ),
-          ),
-          16.verticalSpace,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: state.volume > 1
-                    ? () => controller.setVolume(state.volume - 1)
-                    : null,
-                child: CircleAvatar(
-                  backgroundColor: state.volume > 1
-                      ? AppColors.primaryColor
-                      : Colors.grey.withValues(alpha: 0.3),
-                  radius: 20.r,
-                  child: const Icon(
-                    Icons.remove,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ).r,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  border: Border.all(
-                    color: Colors.grey.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      state.isMuted ? 'Muted' : '${state.volume}/10',
-                      style: TextStyle(
-                        color: state.isMuted
-                            ? Colors.red
-                            : AppColors.primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13.spMin,
-                      ),
-                    ),
-                    14.horizontalSpace,
-                    Row(
-                      children: List.generate(10, (index) {
-                        final stepNumber = index + 1;
-                        final isActive =
-                            !state.isMuted && stepNumber <= state.volume;
-                        return Container(
-                          width: 4.w,
-                          height: 16.h,
-                          margin: EdgeInsets.only(
-                            right: index < 9 ? 4.w : 0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? AppColors.primaryColor
-                                : (state.isMuted && stepNumber <= state.volume)
-                                    ? Colors.red.withValues(alpha: 0.4)
-                                    : Colors.grey.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2.r),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: state.volume < 10
-                    ? () => controller.setVolume(state.volume + 1)
-                    : null,
-                child: CircleAvatar(
-                  backgroundColor: state.volume < 10
-                      ? AppColors.primaryColor
-                      : Colors.grey.withValues(alpha: 0.3),
-                  radius: 20.r,
-                  child: const Icon(Icons.add, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
