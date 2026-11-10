@@ -23,6 +23,7 @@ class DashboardState {
     this.manufacturer = '',
     this.model = '',
     this.isStreamingAudio = false,
+    this.isSystemAudioRouted = false,
     this.lastCommandMessage,
   });
 
@@ -43,12 +44,18 @@ class DashboardState {
   final String manufacturer;
   final String model;
   final bool isStreamingAudio;
+  final bool isSystemAudioRouted;
   final String? lastCommandMessage;
 
   bool get isConnected =>
       !connectionState.toLowerCase().contains('dis') &&
       (connectionState.toLowerCase().contains('conn') ||
           connectionState.toLowerCase().contains('stream'));
+
+  bool get isAudioReady =>
+      isStreamingAudio ||
+      isSystemAudioRouted ||
+      audioTransport != ChordAudioTransport.none;
 
   DashboardState copyWith({
     int? batteryLevel,
@@ -68,6 +75,7 @@ class DashboardState {
     String? manufacturer,
     String? model,
     bool? isStreamingAudio,
+    bool? isSystemAudioRouted,
     String? lastCommandMessage,
     bool clearCommandMessage = false,
   }) {
@@ -89,6 +97,7 @@ class DashboardState {
       manufacturer: manufacturer ?? this.manufacturer,
       model: model ?? this.model,
       isStreamingAudio: isStreamingAudio ?? this.isStreamingAudio,
+      isSystemAudioRouted: isSystemAudioRouted ?? this.isSystemAudioRouted,
       lastCommandMessage: clearCommandMessage
           ? null
           : (lastCommandMessage ?? this.lastCommandMessage),
@@ -225,6 +234,9 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
           connectionState: repo.isConnected ? 'Connected' : state.connectionState,
         );
       }),
+      repo.isSystemAudioRouted.listen((routed) {
+        state = state.copyWith(isSystemAudioRouted: routed);
+      }),
     ]);
 
     final device = repo.connectedDevice ?? repo.lastConnectedDevice;
@@ -258,6 +270,8 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       isStreamingAudio: isDeviceConnected &&
           repo.currentConnectionTelemetry ==
               ChordConnectionTelemetry.streamingAudio,
+      isSystemAudioRouted:
+          isDeviceConnected && repo.currentIsSystemAudioRouted,
     );
 
     // Trigger full sync if connected
@@ -273,6 +287,7 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
     state = state.copyWith(
       connectionState: 'Disconnected',
       isStreamingAudio: false,
+      isSystemAudioRouted: false,
     );
   }
 
@@ -306,8 +321,33 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       isStreamingAudio: connected &&
           repo.currentConnectionTelemetry ==
               ChordConnectionTelemetry.streamingAudio,
+      isSystemAudioRouted: connected && repo.currentIsSystemAudioRouted,
     );
     return connected;
+  }
+
+  Future<void> enableAudioStreaming() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device first.');
+      return;
+    }
+    final repo = ref.read(deviceRepositoryProvider);
+    final ok = await repo.enableAudioStreaming();
+    state = state.copyWith(
+      audioTransport: repo.currentAudioTransport,
+      isSystemAudioRouted: repo.currentIsSystemAudioRouted,
+      isStreamingAudio:
+          repo.currentConnectionTelemetry ==
+          ChordConnectionTelemetry.streamingAudio,
+    );
+    if (ok) {
+      Toasts.showSuccess('Audio streaming enabled for ${state.deviceName}.');
+    } else {
+      Toasts.showError(
+        'Opening Bluetooth settings — ensure Hearing Aid / Media Audio is toggled on.',
+      );
+      await repo.openSystemBluetoothSettings();
+    }
   }
 
   Future<void> setVolume(int vol) async {

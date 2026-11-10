@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
 import 'package:cord_hearing/src/core/services/chord_ota_service.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -30,6 +31,22 @@ void main() {
       expect(ChordBleConstants.isDeviceInfoService(disService128), isTrue);
 
       expect(ChordBleConstants.isChordService(chordService128), isTrue);
+    });
+
+    test('DashboardState.isAudioReady reflects ASHA, LE Audio, and OS routing', () {
+      final idle = DashboardState(connectionState: 'Connected');
+      expect(idle.isAudioReady, isFalse);
+
+      final ashaReady = idle.copyWith(audioTransport: ChordAudioTransport.asha);
+      expect(ashaReady.isAudioReady, isTrue);
+
+      final leAudioReady = idle.copyWith(
+        audioTransport: ChordAudioTransport.leAudio,
+      );
+      expect(leAudioReady.isAudioReady, isTrue);
+
+      final systemRouted = idle.copyWith(isSystemAudioRouted: true);
+      expect(systemRouted.isAudioReady, isTrue);
     });
   });
 
