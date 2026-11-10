@@ -2,6 +2,7 @@ import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -23,11 +24,9 @@ class DeviceStatusCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dashboardProvider);
-    final repo = ref.read(deviceRepositoryProvider);
-    final isConnected = state.isConnected ||
-        repo.isConnected ||
-        repo.connectedDevice != null;
+    final isConnected = state.isConnected;
     final isDisconnected = !isConnected;
+    final cleanFw = state.firmwareVersion.trim();
 
     return Container(
       padding: const EdgeInsets.all(16).r,
@@ -59,7 +58,7 @@ class DeviceStatusCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              if (state.firmwareVersion.isNotEmpty)
+              if (cleanFw.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -70,7 +69,7 @@ class DeviceStatusCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: Text(
-                    'FW v${state.firmwareVersion}',
+                    'FW v$cleanFw',
                     style: TextStyle(
                       fontSize: 11.spMin,
                       color: Colors.grey[700],
@@ -92,13 +91,16 @@ class DeviceStatusCard extends ConsumerWidget {
                   ),
                   8.horizontalSpace,
                   Text(
-                    '${state.batteryLevel}%',
+                    isConnected || state.batteryLevel > 0
+                        ? '${state.batteryLevel}%'
+                        : '—%',
                     style: TextStyle(
                       fontSize: 16.spMin,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (state.chargingStatus == ChordChargingStatus.charging) ...[
+                  if (isConnected &&
+                      state.chargingStatus == ChordChargingStatus.charging) ...[
                     6.horizontalSpace,
                     Icon(
                       Icons.bolt,
@@ -108,27 +110,49 @@ class DeviceStatusCard extends ConsumerWidget {
                   ],
                 ],
               ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.bluetooth,
-                    color: isDisconnected ? Colors.red : AppColors.primaryColor,
-                    size: 20.spMin,
-                  ),
-                  4.horizontalSpace,
-                  Text(
-                    state.isStreamingAudio
-                        ? 'Streaming Audio (${state.audioTransport.label})'
-                        : (isConnected ? 'Connected' : 'Disconnected'),
-                    style: TextStyle(
-                      fontSize: 14.spMin,
+              GestureDetector(
+                onTap: isDisconnected
+                    ? () async {
+                        final ok = await ref
+                            .read(dashboardProvider.notifier)
+                            .reconnect();
+                        if (!ok && context.mounted) {
+                          await Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (context) => const DevicePairingView(),
+                            ),
+                          );
+                        }
+                      }
+                    : null,
+                child: Row(
+                  children: [
+                    Icon(
+                      isDisconnected
+                          ? Icons.bluetooth_disabled
+                          : Icons.bluetooth_connected,
                       color: isDisconnected
                           ? Colors.red
                           : AppColors.primaryColor,
-                      fontWeight: FontWeight.w500,
+                      size: 20.spMin,
                     ),
-                  ),
-                ],
+                    4.horizontalSpace,
+                    Text(
+                      state.isStreamingAudio
+                          ? 'Streaming Audio (${state.audioTransport.label})'
+                          : (isConnected
+                                ? 'Connected'
+                                : 'Disconnected • Connect'),
+                      style: TextStyle(
+                        fontSize: 14.spMin,
+                        color: isDisconnected
+                            ? Colors.red
+                            : AppColors.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

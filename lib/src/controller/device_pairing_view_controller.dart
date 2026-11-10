@@ -60,8 +60,11 @@ class DevicePairingViewController
     });
 
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      // Prioritize CHORD hearing aid devices in scan results
-      final sortedResults = List<ScanResult>.from(results)
+      final systemIds = state.systemDevices.map((d) => d.remoteId).toSet();
+      // Exclude devices already shown under "Connected to Phone" and prioritize CHORD
+      final filteredResults = results
+          .where((r) => !systemIds.contains(r.device.remoteId))
+          .toList()
         ..sort((a, b) {
           final aIsChord =
               a.device.platformName.contains('CHORD') ||
@@ -78,7 +81,7 @@ class DevicePairingViewController
           return b.rssi.compareTo(a.rssi);
         });
 
-      state = state.copyWith(devices: sortedResults);
+      state = state.copyWith(devices: filteredResults);
     });
 
     _isScanningSubscription = FlutterBluePlus.isScanning.listen((isScanning) {
@@ -97,7 +100,14 @@ class DevicePairingViewController
     final repository = ref.read(deviceRepositoryProvider);
     final systemDevices = await repository.getSystemConnectedDevices();
     if (systemDevices.isNotEmpty) {
-      state = state.copyWith(systemDevices: systemDevices);
+      final systemIds = systemDevices.map((d) => d.remoteId).toSet();
+      final filteredScan = state.devices
+          .where((r) => !systemIds.contains(r.device.remoteId))
+          .toList();
+      state = state.copyWith(
+        systemDevices: systemDevices,
+        devices: filteredScan,
+      );
     }
   }
 
@@ -160,15 +170,26 @@ class DevicePairingViewController
       requiresPairingMode: false,
     );
 
+    final isAlreadyBondedOrSystem = state.systemDevices.any(
+      (d) => d.remoteId == device.remoteId,
+    );
     final connectStartTime = DateTime.now();
+    var sawConnected = false;
     StreamSubscription<BluetoothConnectionState>? quickDropSub;
 
     try {
       final repository = ref.read(deviceRepositoryProvider);
 
-      // Listen for fast disconnect (spec: unbonded phone disconnects in ~1 sec if not in pairing mode)
+      // Listen for fast disconnect after link establishment
+      // (spec: unbonded phone disconnects in ~1 sec if not in pairing mode).
+      // Ignore the initial 'disconnected' state emitted when listening starts,
+      // and do not ask for pairing mode if the phone is already bonded/connected.
       quickDropSub = device.connectionState.listen((connState) {
-        if (connState == BluetoothConnectionState.disconnected) {
+        if (connState == BluetoothConnectionState.connected) {
+          sawConnected = true;
+        } else if (connState == BluetoothConnectionState.disconnected &&
+            sawConnected &&
+            !isAlreadyBondedOrSystem) {
           final elapsed = DateTime.now().difference(connectStartTime);
           if (elapsed.inMilliseconds < 2500 &&
               state.status == BluetoothScanStatus.connecting) {
@@ -189,7 +210,7 @@ class DevicePairingViewController
     } catch (e) {
       await quickDropSub?.cancel();
       final elapsed = DateTime.now().difference(connectStartTime);
-      if (elapsed.inMilliseconds < 2500) {
+      if (elapsed.inMilliseconds < 2500 && !isAlreadyBondedOrSystem) {
         state = state.copyWith(
           status: BluetoothScanStatus.error,
           requiresPairingMode: true,

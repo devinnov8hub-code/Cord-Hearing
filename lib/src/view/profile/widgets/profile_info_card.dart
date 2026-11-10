@@ -1,4 +1,4 @@
-import 'package:cord_hearing/src/core/app_colors.dart';
+import 'package:change_case/change_case.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -35,37 +35,20 @@ class ProfileInfoCard extends StatelessWidget {
           ),
           24.verticalSpace,
           Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 40.r,
-                  backgroundImage: const NetworkImage(
-                    'https://i.pravatar.cc/150?img=11',
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(4).r,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 16.spMin,
-                    ),
-                  ),
-                ),
-              ],
+            child: CircleAvatar(
+              backgroundColor: Colors.grey.withValues(alpha: 0.2),
+              radius: 50.r,
+              child: Icon(
+                CupertinoIcons.person_alt_circle,
+                size: 40.spMin,
+                color: Colors.blueGrey,
+              ),
             ),
           ),
           24.verticalSpace,
           _buildInfoField(
             icon: CupertinoIcons.person,
-            value: displayName,
+            value: displayName.toCapitalCase(),
           ),
           16.verticalSpace,
           _buildInfoField(

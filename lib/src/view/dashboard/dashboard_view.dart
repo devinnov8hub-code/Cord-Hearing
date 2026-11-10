@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
+import 'package:cord_hearing/src/view/dashboard/device_pairing_view.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/dashboard_header.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/device_status_card.dart';
 import 'package:cord_hearing/src/view/dashboard/widgets/disconnected_bottom_sheet.dart';
@@ -27,7 +30,15 @@ class DashboardView extends ConsumerWidget {
             deviceName: next.deviceName,
             onGoToPairing: () {
               Navigator.of(context).pop(); // Close bottom sheet
-              Navigator.of(context).pop(); // Go back to pairing view
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(); // Go back to pairing view if pushed
+              } else {
+                Navigator.of(context).pushReplacement<void, void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const DevicePairingView(),
+                  ),
+                );
+              }
             },
             onRetry: () {
               Navigator.of(context).pop(); // Close bottom sheet
@@ -75,8 +86,10 @@ class DashboardView extends ConsumerWidget {
               const DeviceStatusCard(),
               16.verticalSpace,
               const HearingProfileCard(),
-              16.verticalSpace,
-              const VolumeLevelCard(),
+              if (!Platform.isIOS) ...[
+                16.verticalSpace,
+                const VolumeLevelCard(),
+              ],
               24.verticalSpace,
             ],
           ),

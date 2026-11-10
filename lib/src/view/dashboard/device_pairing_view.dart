@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cord_hearing/src/controller/device_pairing_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
+import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
 import 'package:cord_hearing/src/core/widgets/app_button.dart';
 import 'package:cord_hearing/src/core/widgets/dialog_sheet.dart';
 import 'package:cord_hearing/src/view/dashboard/dashboard_view.dart';
@@ -46,7 +47,7 @@ class DevicePairingView extends ConsumerWidget {
                 48.verticalSpace,
                 GestureDetector(
                   onTap: () {
-                    Navigator.push<void>(
+                    Navigator.pushReplacement<void, void>(
                       context,
                       MaterialPageRoute<void>(
                         builder: (context) => const DashboardView(),
@@ -395,7 +396,18 @@ class DevicePairingView extends ConsumerWidget {
                             },
                           ),
                   ),
-                48.verticalSpace,
+                24.verticalSpace,
+                Center(
+                  child: Text(
+                    'CHORD Companion App v${ChordBleConstants.appVersion}',
+                    style: TextStyle(
+                      fontSize: 11.spMin,
+                      color: Colors.grey[400],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                24.verticalSpace,
               ],
             ),
           ),

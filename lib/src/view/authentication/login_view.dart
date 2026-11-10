@@ -67,8 +67,8 @@ class LoginView extends StatelessWidget {
                             constraints: BoxConstraints(
                               minHeight: constraints.maxHeight,
                             ),
-                            child: IntrinsicHeight(
-                              child: const _LoginContent(),
+                            child: const IntrinsicHeight(
+                              child: _LoginContent(),
                             ),
                           ),
                         );
