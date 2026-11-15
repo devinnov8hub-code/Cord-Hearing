@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/core/services/paired_devices_service.dart';
 import 'package:cord_hearing/src/core/services/toast_service.dart';
+import 'package:cord_hearing/src/model/paired_device_record.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardState {
@@ -23,6 +25,7 @@ class DashboardState {
     this.manufacturer = '',
     this.model = '',
     this.isStreamingAudio = false,
+    this.isSystemAudioRouted = false,
     this.lastCommandMessage,
   });
 
@@ -43,12 +46,18 @@ class DashboardState {
   final String manufacturer;
   final String model;
   final bool isStreamingAudio;
+  final bool isSystemAudioRouted;
   final String? lastCommandMessage;
 
   bool get isConnected =>
       !connectionState.toLowerCase().contains('dis') &&
       (connectionState.toLowerCase().contains('conn') ||
           connectionState.toLowerCase().contains('stream'));
+
+  bool get isAudioReady =>
+      isStreamingAudio ||
+      isSystemAudioRouted ||
+      audioTransport != ChordAudioTransport.none;
 
   DashboardState copyWith({
     int? batteryLevel,
@@ -68,6 +77,7 @@ class DashboardState {
     String? manufacturer,
     String? model,
     bool? isStreamingAudio,
+    bool? isSystemAudioRouted,
     String? lastCommandMessage,
     bool clearCommandMessage = false,
   }) {
@@ -89,6 +99,7 @@ class DashboardState {
       manufacturer: manufacturer ?? this.manufacturer,
       model: model ?? this.model,
       isStreamingAudio: isStreamingAudio ?? this.isStreamingAudio,
+      isSystemAudioRouted: isSystemAudioRouted ?? this.isSystemAudioRouted,
       lastCommandMessage: clearCommandMessage
           ? null
           : (lastCommandMessage ?? this.lastCommandMessage),
@@ -128,6 +139,16 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
           isStreamingAudio: isConn && state.isStreamingAudio,
           deviceName: devName,
         );
+        if (isConn && dev != null) {
+          unawaited(
+            ref.read(pairedDevicesProvider.notifier).recordDevice(
+                  remoteId: dev.remoteId.str,
+                  name: devName,
+                  firmwareVersion: repo.currentFirmwareVersion,
+                  model: repo.currentModel,
+                ),
+          );
+        }
       }),
       repo.volume.listen((vol) {
         state = state.copyWith(
@@ -199,6 +220,19 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
           firmwareVersion: version,
           connectionState: repo.isConnected ? 'Connected' : state.connectionState,
         );
+        final dev = repo.connectedDevice;
+        if (dev != null) {
+          unawaited(
+            ref.read(pairedDevicesProvider.notifier).recordDevice(
+                  remoteId: dev.remoteId.str,
+                  name: dev.platformName.isNotEmpty
+                      ? dev.platformName
+                      : state.deviceName,
+                  firmwareVersion: version,
+                  model: repo.currentModel,
+                ),
+          );
+        }
       }),
       repo.hardwareRevision.listen((hwRev) {
         state = state.copyWith(
@@ -217,6 +251,19 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
           model: model,
           connectionState: repo.isConnected ? 'Connected' : state.connectionState,
         );
+        final dev = repo.connectedDevice;
+        if (dev != null) {
+          unawaited(
+            ref.read(pairedDevicesProvider.notifier).recordDevice(
+                  remoteId: dev.remoteId.str,
+                  name: dev.platformName.isNotEmpty
+                      ? dev.platformName
+                      : state.deviceName,
+                  firmwareVersion: repo.currentFirmwareVersion,
+                  model: model,
+                ),
+          );
+        }
       }),
       repo.controlResponses.listen((entry) {
         state = state.copyWith(
@@ -224,6 +271,9 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
               'Command 0x${entry.key.toRadixString(16)}: ${entry.value.description}',
           connectionState: repo.isConnected ? 'Connected' : state.connectionState,
         );
+      }),
+      repo.isSystemAudioRouted.listen((routed) {
+        state = state.copyWith(isSystemAudioRouted: routed);
       }),
     ]);
 
@@ -236,6 +286,21 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
     }
 
     final isDeviceConnected = repo.isConnected;
+
+    // Trigger full sync & record device if connected
+    if (isDeviceConnected) {
+      if (device != null) {
+        unawaited(
+          ref.read(pairedDevicesProvider.notifier).recordDevice(
+                remoteId: device.remoteId.str,
+                name: name,
+                firmwareVersion: repo.currentFirmwareVersion,
+                model: repo.currentModel,
+              ),
+        );
+      }
+      repo.sync();
+    }
 
     // Initialize with cached repo values
     final initial = DashboardState(
@@ -258,12 +323,9 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       isStreamingAudio: isDeviceConnected &&
           repo.currentConnectionTelemetry ==
               ChordConnectionTelemetry.streamingAudio,
+      isSystemAudioRouted:
+          isDeviceConnected && repo.currentIsSystemAudioRouted,
     );
-
-    // Trigger full sync if connected
-    if (isDeviceConnected) {
-      repo.sync();
-    }
 
     return initial;
   }
@@ -273,26 +335,53 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
     state = state.copyWith(
       connectionState: 'Disconnected',
       isStreamingAudio: false,
+      isSystemAudioRouted: false,
     );
   }
 
   Future<bool> reconnect() async {
     final repo = ref.read(deviceRepositoryProvider);
     var target = repo.connectedDevice ?? repo.lastConnectedDevice;
+    var fallbackName = state.deviceName;
     if (target == null) {
       final sys = await repo.getSystemConnectedDevices();
       if (sys.isNotEmpty) {
         target = sys.first;
       }
     }
+    if (target == null) {
+      final paired = ref.read(pairedDevicesProvider);
+      if (paired.isNotEmpty) {
+        target = BluetoothDevice.fromId(paired.first.remoteId);
+        fallbackName = paired.first.name;
+      }
+    }
     if (target == null) return false;
-    await repo.connect(target);
+    return _connectAndSyncTarget(target, fallbackName: fallbackName);
+  }
+
+  Future<bool> connectToPairedDevice(PairedDeviceRecord record) async {
+    final target = BluetoothDevice.fromId(record.remoteId);
+    return _connectAndSyncTarget(target, fallbackName: record.name);
+  }
+
+  Future<bool> _connectAndSyncTarget(
+    BluetoothDevice target, {
+    required String fallbackName,
+  }) async {
+    final repo = ref.read(deviceRepositoryProvider);
+    try {
+      await repo.connect(target);
+    } catch (_) {
+      return false;
+    }
     final connected = repo.isConnected;
+    final resolvedName = target.platformName.isNotEmpty
+        ? target.platformName
+        : fallbackName;
     state = state.copyWith(
       connectionState: connected ? 'Connected' : 'Disconnected',
-      deviceName: target.platformName.isNotEmpty
-          ? target.platformName
-          : state.deviceName,
+      deviceName: resolvedName,
       batteryLevel: repo.currentBatteryLevel,
       firmwareVersion: repo.currentFirmwareVersion,
       hardwareRevision: repo.currentHardwareRevision,
@@ -306,8 +395,41 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
       isStreamingAudio: connected &&
           repo.currentConnectionTelemetry ==
               ChordConnectionTelemetry.streamingAudio,
+      isSystemAudioRouted: connected && repo.currentIsSystemAudioRouted,
     );
+    if (connected) {
+      await ref.read(pairedDevicesProvider.notifier).recordDevice(
+            remoteId: target.remoteId.str,
+            name: resolvedName,
+            firmwareVersion: repo.currentFirmwareVersion,
+            model: repo.currentModel,
+          );
+    }
     return connected;
+  }
+
+  Future<void> enableAudioStreaming() async {
+    if (!state.isConnected) {
+      Toasts.showError('Connect your CHORD device first.');
+      return;
+    }
+    final repo = ref.read(deviceRepositoryProvider);
+    final ok = await repo.enableAudioStreaming();
+    state = state.copyWith(
+      audioTransport: repo.currentAudioTransport,
+      isSystemAudioRouted: repo.currentIsSystemAudioRouted,
+      isStreamingAudio:
+          repo.currentConnectionTelemetry ==
+          ChordConnectionTelemetry.streamingAudio,
+    );
+    if (ok) {
+      Toasts.showSuccess('Audio streaming enabled for ${state.deviceName}.');
+    } else {
+      Toasts.showError(
+        'Opening Bluetooth settings — ensure Hearing Aid / Media Audio is toggled on.',
+      );
+      await repo.openSystemBluetoothSettings();
+    }
   }
 
   Future<void> setVolume(int vol) async {
@@ -405,6 +527,7 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
     }
     try {
       await ref.read(deviceRepositoryProvider).factoryReset();
+      await ref.read(pairedDevicesProvider.notifier).clearAll();
     } catch (_) {
       Toasts.showError('Failed to factory reset CHORD device.');
     }
@@ -417,6 +540,7 @@ class DashboardViewController extends AutoDisposeNotifier<DashboardState> {
     }
     try {
       await ref.read(deviceRepositoryProvider).forgetAllPhones();
+      await ref.read(pairedDevicesProvider.notifier).clearAll();
     } catch (_) {
       Toasts.showError('Failed to forget bonded phones on CHORD device.');
     }

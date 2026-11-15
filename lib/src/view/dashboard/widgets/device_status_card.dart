@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/app_assets.dart';
 import 'package:cord_hearing/src/core/app_colors.dart';
@@ -140,6 +142,8 @@ class DeviceStatusCard extends ConsumerWidget {
                     Text(
                       state.isStreamingAudio
                           ? 'Streaming Audio (${state.audioTransport.label})'
+                          : state.isAudioReady
+                          ? 'Connected • Audio (${state.audioTransport != ChordAudioTransport.none ? state.audioTransport.label : "Active"})'
                           : (isConnected
                                 ? 'Connected'
                                 : 'Disconnected • Connect'),
@@ -156,6 +160,67 @@ class DeviceStatusCard extends ConsumerWidget {
               ),
             ],
           ),
+          if (!isDisconnected && Platform.isAndroid && !state.isAudioReady) ...[
+            12.verticalSpace,
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ).r,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F7FF),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: const Color(0xFFB9DCF7)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.volume_up_rounded,
+                    color: AppColors.primaryColor,
+                    size: 18.spMin,
+                  ),
+                  8.horizontalSpace,
+                  Expanded(
+                    child: Text(
+                      'Phone media & call audio not routed yet.',
+                      style: TextStyle(
+                        fontSize: 12.spMin,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  8.horizontalSpace,
+                  SizedBox(
+                    height: 28.h,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        ref
+                            .read(dashboardProvider.notifier)
+                            .enableAudioStreaming();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 10).r,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Enable Audio',
+                        style: TextStyle(
+                          fontSize: 11.spMin,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           // Battery Warnings matching device light patterns (Spec Section 5 & 9)
           if (!isDisconnected &&
               state.chargingStatus != ChordChargingStatus.charging &&

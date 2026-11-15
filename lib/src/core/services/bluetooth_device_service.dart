@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -72,6 +73,7 @@ abstract class BluetoothDeviceRepository {
   Stream<String> get manufacturerName;
   Stream<String> get modelNumber;
   Stream<MapEntry<int, ChordControlStatus>> get controlResponses;
+  Stream<bool> get isSystemAudioRouted;
 
   // Cached current values for synchronous access
   int get currentVolume;
@@ -86,6 +88,7 @@ abstract class BluetoothDeviceRepository {
   String get currentHardwareRevision;
   String get currentManufacturer;
   String get currentModel;
+  bool get currentIsSystemAudioRouted;
 
   /// Permissions & discovery
   Future<bool> checkAndRequestPermissions();
@@ -94,6 +97,10 @@ abstract class BluetoothDeviceRepository {
   /// Lifecycle
   Future<void> connect(BluetoothDevice device);
   Future<void> disconnect();
+
+  /// OS Audio Profile & Routing (ASHA / LE Audio / A2DP / HFP)
+  Future<bool> enableAudioStreaming();
+  Future<void> openSystemBluetoothSettings();
 
   /// Controls (single-byte writes)
   Future<void> setVolume(int step);
@@ -114,6 +121,10 @@ abstract class BluetoothDeviceRepository {
 }
 
 class BluetoothDeviceService implements BluetoothDeviceRepository {
+  static const MethodChannel _audioChannel = MethodChannel(
+    'com.cordhearingaid.app/bluetooth_audio',
+  );
+
   BluetoothDevice? _connectedDevice;
   BluetoothDevice? _lastConnectedDevice;
   StreamSubscription<BluetoothConnectionState>? _connectionStateSubscription;
@@ -145,6 +156,7 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   final _modelController = StreamController<String>.broadcast();
   final _controlResponseController =
       StreamController<MapEntry<int, ChordControlStatus>>.broadcast();
+  final _systemAudioRoutedController = StreamController<bool>.broadcast();
 
   // Cached values
   BluetoothConnectionState _currentConnectionState =
@@ -165,6 +177,7 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   String _currentHardwareRevision = '';
   String _currentManufacturer = '';
   String _currentModel = '';
+  bool _currentIsSystemAudioRouted = false;
 
   // Cached characteristics for fast access and explicit post-pairing reads
   BluetoothCharacteristic? _volumeChar;
@@ -255,6 +268,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   @override
   Stream<MapEntry<int, ChordControlStatus>> get controlResponses =>
       _controlResponseController.stream;
+  @override
+  Stream<bool> get isSystemAudioRouted => _systemAudioRoutedController.stream;
 
   @override
   int get currentVolume => _currentVolume;
@@ -280,6 +295,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
   String get currentManufacturer => _currentManufacturer;
   @override
   String get currentModel => _currentModel;
+  @override
+  bool get currentIsSystemAudioRouted => _currentIsSystemAudioRouted;
 
   @override
   Future<bool> checkAndRequestPermissions() async {
@@ -316,10 +333,28 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
       debugPrint('Error retrieving system connected devices: $e');
     }
     if (Platform.isAndroid) {
+      var audioConnectedIds = <String>{};
+      try {
+        final rawAddresses = await _audioChannel.invokeListMethod<String>(
+          'getAudioConnectedDevices',
+        );
+        if (rawAddresses != null) {
+          audioConnectedIds = rawAddresses
+              .map((a) => a.toUpperCase())
+              .toSet();
+        }
+      } catch (e) {
+        debugPrint('Error retrieving audio connected devices: $e');
+      }
+
       try {
         final bonded = await FlutterBluePlus.bondedDevices;
         for (final d in bonded) {
-          if (d.platformName.toUpperCase().contains('CHORD')) {
+          final upperName = d.platformName.toUpperCase();
+          final upperId = d.remoteId.str.toUpperCase();
+          if (upperName.contains('CHORD') ||
+              upperName.contains('COCHLEAR') ||
+              audioConnectedIds.contains(upperId)) {
             result[d.remoteId.str] = d;
           }
         }
@@ -361,6 +396,8 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
       } else if (state == BluetoothConnectionState.disconnected) {
         _connectedDevice = null;
         _currentConnectionTelemetry = ChordConnectionTelemetry.disconnected;
+        _currentIsSystemAudioRouted = false;
+        _systemAudioRoutedController.add(false);
         _clearCharacteristicCache();
       }
     });
@@ -371,6 +408,13 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     _lastConnectedDevice = device;
     _currentConnectionState = BluetoothConnectionState.connected;
     _connectionStateController.add(BluetoothConnectionState.connected);
+
+    // On Android, ensure OS-level bonding (createBond) and activate the
+    // system Hearing Aid (ASHA) / LE Audio profiles so music and calls route
+    // through the hearing aid even when connecting via the app.
+    if (Platform.isAndroid) {
+      await _ensureAndroidBondAndAudio(device);
+    }
 
     // Request ATT MTU up to 498 as specified in Chord tech reference
     try {
@@ -387,6 +431,140 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     // Battery Level (0x2A19), Firmware Version (000e), DIS strings, and all
     // readable CHORD characteristics after pairing finishes.
     await sync();
+
+    // Follow-up check after OS ASHA / LE Audio profile handshake completes
+    if (Platform.isAndroid) {
+      unawaited(_delayedAudioStreamingRefresh(device));
+    }
+  }
+
+  /// Ensures the device is bonded at the Android OS level and connects the
+  /// native `HEARING_AID` (ASHA) and `LE_AUDIO` Bluetooth profiles so media
+  /// and phone calls stream to the hearing aid.
+  Future<void> _ensureAndroidBondAndAudio(BluetoothDevice device) async {
+    try {
+      final currentBond = await device.bondState.first.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => BluetoothBondState.none,
+      );
+      if (currentBond != BluetoothBondState.bonded) {
+        try {
+          await device.createBond(timeout: 15);
+        } catch (e) {
+          debugPrint('createBond note: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('Bond state check note: $e');
+    }
+
+    await _invokeNativeAudioConnect(device.remoteId.str);
+  }
+
+  Future<bool> _invokeNativeAudioConnect(String address) async {
+    if (!Platform.isAndroid) return false;
+    try {
+      final res = await _audioChannel.invokeMapMethod<String, dynamic>(
+        'ensureBondAndConnectAudio',
+        {'address': address},
+      );
+      final routed = res?['audioOutputConnected'] == true;
+      _currentIsSystemAudioRouted = routed;
+      _systemAudioRoutedController.add(routed);
+      return routed;
+    } catch (e) {
+      debugPrint('Native audio profile connect note: $e');
+      return false;
+    }
+  }
+
+  Future<void> _delayedAudioStreamingRefresh(BluetoothDevice device) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    if (!isConnected || _connectedDevice?.remoteId != device.remoteId) return;
+
+    try {
+      final routed = await _audioChannel.invokeMethod<bool>(
+        'routeAudioToHearingAid',
+        {'address': device.remoteId.str},
+      );
+      if (routed != null) {
+        _currentIsSystemAudioRouted = routed;
+        _systemAudioRoutedController.add(routed);
+      }
+    } catch (_) {}
+
+    if (_audioTransportChar != null) {
+      try {
+        final val = await _safeReadWithRetry(_audioTransportChar!, maxRetries: 2);
+        if (val.isNotEmpty) {
+          _onAudioTransportBytes(val);
+        }
+      } catch (_) {}
+    }
+    if (_connectionStatusChar != null) {
+      try {
+        final val = await _safeReadWithRetry(
+          _connectionStatusChar!,
+          maxRetries: 2,
+        );
+        if (val.isNotEmpty) {
+          _onConnectionStatusBytes(val);
+        }
+      } catch (_) {}
+    }
+  }
+
+  @override
+  Future<bool> enableAudioStreaming() async {
+    final device = _connectedDevice ?? _lastConnectedDevice;
+    if (device == null || !Platform.isAndroid) return false;
+
+    await _ensureAndroidBondAndAudio(device);
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+
+    var routed = false;
+    try {
+      routed = await _audioChannel.invokeMethod<bool>(
+            'routeAudioToHearingAid',
+            {'address': device.remoteId.str},
+          ) ??
+          false;
+      _currentIsSystemAudioRouted = routed;
+      _systemAudioRoutedController.add(routed);
+    } catch (_) {}
+
+    if (isConnected) {
+      if (_audioTransportChar != null) {
+        try {
+          final val = await _safeReadWithRetry(
+            _audioTransportChar!,
+            maxRetries: 2,
+          );
+          if (val.isNotEmpty) _onAudioTransportBytes(val);
+        } catch (_) {}
+      }
+      if (_connectionStatusChar != null) {
+        try {
+          final val = await _safeReadWithRetry(
+            _connectionStatusChar!,
+            maxRetries: 2,
+          );
+          if (val.isNotEmpty) _onConnectionStatusBytes(val);
+        } catch (_) {}
+      }
+    }
+
+    return routed || _currentAudioTransport != ChordAudioTransport.none;
+  }
+
+  @override
+  Future<void> openSystemBluetoothSettings() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _audioChannel.invokeMethod<bool>('openBluetoothSettings');
+    } catch (e) {
+      debugPrint('Failed to open Bluetooth settings: $e');
+    }
   }
 
   Future<void> _setupCharacteristicsAndSubscriptions(
@@ -712,7 +890,9 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     _connectedDevice = null;
     _currentConnectionState = BluetoothConnectionState.disconnected;
     _currentConnectionTelemetry = ChordConnectionTelemetry.disconnected;
+    _currentIsSystemAudioRouted = false;
     _connectionStateController.add(BluetoothConnectionState.disconnected);
+    _systemAudioRoutedController.add(false);
     if (deviceToDisconnect != null) {
       try {
         await deviceToDisconnect.disconnect();
@@ -800,5 +980,6 @@ class BluetoothDeviceService implements BluetoothDeviceRepository {
     _manufacturerController.close();
     _modelController.close();
     _controlResponseController.close();
+    _systemAudioRoutedController.close();
   }
 }
