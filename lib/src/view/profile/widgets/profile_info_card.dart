@@ -1,20 +1,38 @@
 import 'package:change_case/change_case.dart';
+import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
+import 'package:cord_hearing/src/core/services/paired_devices_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class ProfileInfoCard extends StatelessWidget {
+class ProfileInfoCard extends ConsumerWidget {
   const ProfileInfoCard({required this.deviceName, super.key});
   final String deviceName;
 
   @override
-  Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final email = user?.email ?? 'Guest@email.com';
-    final displayName = email.isNotEmpty && email.contains('@')
-        ? email.split('@').first
-        : 'Guest';
+  Widget build(BuildContext context, WidgetRef ref) {
+    User? user;
+    try {
+      user = FirebaseAuth.instance.currentUser;
+    } catch (_) {}
+
+    final email = (user?.email ?? '').trim();
+    final rawDisplayName = (user?.displayName ?? '').trim();
+    final displayName = rawDisplayName.isNotEmpty
+        ? rawDisplayName
+        : (email.isNotEmpty && email.contains('@')
+              ? email.split('@').first
+              : 'Account User');
+
+    final dashboardState = ref.watch(dashboardProvider);
+    final pairedDevices = ref.watch(pairedDevicesProvider);
+    final resolvedDeviceLabel = dashboardState.isConnected
+        ? deviceName
+        : (pairedDevices.isNotEmpty
+              ? '${pairedDevices.first.name} (Offline)'
+              : 'No device paired');
 
     return Container(
       padding: const EdgeInsets.all(20).r,
@@ -50,16 +68,18 @@ class ProfileInfoCard extends StatelessWidget {
             icon: CupertinoIcons.person,
             value: displayName.toCapitalCase(),
           ),
-          16.verticalSpace,
-          _buildInfoField(
-            icon: CupertinoIcons.mail,
-            value: email,
-            textColor: Colors.grey[600],
-          ),
+          if (email.isNotEmpty) ...[
+            16.verticalSpace,
+            _buildInfoField(
+              icon: CupertinoIcons.mail,
+              value: email,
+              textColor: Colors.grey[600],
+            ),
+          ],
           16.verticalSpace,
           _buildInfoField(
             icon: Icons.bluetooth,
-            value: deviceName,
+            value: resolvedDeviceLabel,
             textColor: Colors.grey[600],
           ),
         ],

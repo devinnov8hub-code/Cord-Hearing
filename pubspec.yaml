@@ -35,6 +35,7 @@ dependencies:
   flutter_blue_plus: ^1.31.18
   flutter_riverpod: ^2.5.1
   flutter_screenutil: ^5.9.3
+  flutter_secure_storage: ^11.2.0
   flutter_svg: ^2.3.0
   lottie: ^3.3.3
   permission_handler: ^11.3.1

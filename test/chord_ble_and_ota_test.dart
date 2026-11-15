@@ -3,7 +3,10 @@ import 'dart:typed_data';
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
 import 'package:cord_hearing/src/core/services/chord_ota_service.dart';
+import 'package:cord_hearing/src/core/services/paired_devices_service.dart';
+import 'package:cord_hearing/src/model/paired_device_record.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -125,6 +128,57 @@ void main() {
       final decoded = SmpCbor.decode(indefBytes)! as Map<String, Object?>;
       expect(decoded['rc'], equals(0));
       expect(decoded['off'], equals(128));
+    });
+  });
+
+  group('PairedDeviceRecord & PairedDevicesStorage', () {
+    test('serializes and formats relative pairing time', () {
+      final now = DateTime(2026, 11, 14, 19, 30);
+      final record = PairedDeviceRecord(
+        remoteId: 'AA:BB:CC:DD:EE:FF',
+        name: 'CHORD_HA_Innov8',
+        pairedAt: now.subtract(const Duration(days: 2)),
+        firmwareVersion: '0.3.1',
+        model: 'CHORD-1',
+      );
+
+      final roundTrip = PairedDeviceRecord.fromJson(record.toJson());
+      expect(roundTrip.remoteId, equals('AA:BB:CC:DD:EE:FF'));
+      expect(roundTrip.name, equals('CHORD_HA_Innov8'));
+      expect(roundTrip.firmwareVersion, equals('0.3.1'));
+      expect(roundTrip.model, equals('CHORD-1'));
+      expect(roundTrip.formatRelativeTime(now: now), equals('Paired 2 days ago'));
+    });
+
+    test('isolates paired devices per account and supports upsert/remove', () async {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+      var currentAccount = 'user_uid_1';
+      final storage = PairedDevicesStorage(
+        accountIdResolver: () => currentAccount,
+      );
+
+      await storage.upsertDevice(
+        PairedDeviceRecord(
+          remoteId: '11:22:33:44:55:66',
+          name: 'CHORD Left',
+          pairedAt: DateTime(2026, 11, 12),
+          firmwareVersion: '0.3.0',
+        ),
+      );
+
+      final user1Devices = await storage.loadDevices();
+      expect(user1Devices.length, equals(1));
+      expect(user1Devices.first.name, equals('CHORD Left'));
+
+      // Switch to a different account: should not see user_uid_1's devices
+      currentAccount = 'user_uid_2';
+      final user2Devices = await storage.loadDevices();
+      expect(user2Devices, isEmpty);
+
+      // Switch back to user_uid_1 and remove the device
+      currentAccount = 'user_uid_1';
+      final afterRemove = await storage.removeDevice('11:22:33:44:55:66');
+      expect(afterRemove, isEmpty);
     });
   });
 }

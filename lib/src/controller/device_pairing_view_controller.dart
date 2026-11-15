@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/core/services/paired_devices_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -205,6 +206,15 @@ class DevicePairingViewController
 
       await repository.connect(device);
       await quickDropSub.cancel();
+
+      await ref.read(pairedDevicesProvider.notifier).recordDevice(
+            remoteId: device.remoteId.str,
+            name: device.platformName.isNotEmpty
+                ? device.platformName
+                : 'CHORD Hearing Aid',
+            firmwareVersion: repository.currentFirmwareVersion,
+            model: repository.currentModel,
+          );
 
       state = state.copyWith(status: BluetoothScanStatus.connected);
     } catch (e) {
