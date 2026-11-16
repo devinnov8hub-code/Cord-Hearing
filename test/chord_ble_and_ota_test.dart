@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cord_hearing/src/controller/dashboard_view_controller.dart';
 import 'package:cord_hearing/src/core/services/chord_ble_constants.dart';
 import 'package:cord_hearing/src/core/services/chord_ota_service.dart';
+import 'package:cord_hearing/src/core/services/firebase_ota_service.dart';
 import 'package:cord_hearing/src/core/services/paired_devices_service.dart';
 import 'package:cord_hearing/src/model/paired_device_record.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -179,6 +180,46 @@ void main() {
       currentAccount = 'user_uid_1';
       final afterRemove = await storage.removeDevice('11:22:33:44:55:66');
       expect(afterRemove, isEmpty);
+    });
+  });
+
+  group('CloudFirmwareManifest', () {
+    test('parses Firebase Storage manifest JSON and compares versions', () {
+      final manifest = CloudFirmwareManifest.fromJson(const <String, dynamic>{
+        'schema': 1,
+        'version': '0.3.2',
+        'hardware': 'nrf5340dk',
+        'board': 'nrf5340dk/nrf5340/cpuapp',
+        'path':
+            'firmware/images/nrf5340dk/chord_app_v0.3.2_nrf5340dk.signed.bin',
+        'size': 553751,
+        'sha256':
+            '19f11dd2bad16c0fc58d476a22f696bc4df99982c744e289adb481881f654d01',
+        'image_hash':
+            '91ae99eae0fab1b6e17de65642c821e1760ff35bce141e6482dbcfb64d1ac7bc',
+        'signing': 'dev',
+        'notes': 'ci/cd flow test',
+        'git': '43724770db34a169e0baddc373eb90764fbd2104',
+        'built': '2026-11-15T11:06:18Z',
+      });
+
+      expect(manifest.version, equals('0.3.2'));
+      expect(manifest.hardware, equals('nrf5340dk'));
+      expect(manifest.board, equals('nrf5340dk/nrf5340/cpuapp'));
+      expect(
+        manifest.path,
+        equals(
+          'firmware/images/nrf5340dk/chord_app_v0.3.2_nrf5340dk.signed.bin',
+        ),
+      );
+      expect(manifest.size, equals(553751));
+      expect(manifest.isNewerThan('0.3.0'), isTrue);
+      expect(manifest.isNewerThan('0.3.2'), isFalse);
+      expect(manifest.isNewerThan('0.3.10'), isFalse);
+      expect(
+        CloudFirmwareManifest.compareVersions('0.3.10', '0.3.2'),
+        greaterThan(0),
+      );
     });
   });
 }

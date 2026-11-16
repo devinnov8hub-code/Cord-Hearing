@@ -9,41 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class DeviceActionsCard extends ConsumerStatefulWidget {
+class DeviceActionsCard extends ConsumerWidget {
   const DeviceActionsCard({super.key});
 
   @override
-  ConsumerState<DeviceActionsCard> createState() => _DeviceActionsCardState();
-}
-
-class _DeviceActionsCardState extends ConsumerState<DeviceActionsCard> {
-  int _fwTapCount = 0;
-  DateTime? _lastFwTap;
-
-  void _onFirmwareRowTap() {
-    final now = DateTime.now();
-    if (_lastFwTap == null ||
-        now.difference(_lastFwTap!) > const Duration(seconds: 3)) {
-      _fwTapCount = 1;
-    } else {
-      _fwTapCount++;
-    }
-    _lastFwTap = now;
-
-    if (_fwTapCount >= 5) {
-      _fwTapCount = 0;
-      final current = ref.read(developerOtaUnlockedProvider);
-      ref.read(developerOtaUnlockedProvider.notifier).state = !current;
-      Toasts.showSuccess(
-        !current
-            ? 'Developer firmware file installer enabled'
-            : 'Developer firmware file installer hidden',
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(dashboardProvider.notifier);
     final state = ref.watch(dashboardProvider);
     final isConnected = state.isConnected;
@@ -101,13 +71,9 @@ class _DeviceActionsCardState extends ConsumerState<DeviceActionsCard> {
                 ],
               ),
               16.verticalSpace,
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _onFirmwareRowTap,
-                child: _buildDiagRow(
-                  'Firmware Version',
-                  cleanFw.isNotEmpty ? 'v$cleanFw' : '—',
-                ),
+              _buildDiagRow(
+                'Firmware Version',
+                cleanFw.isNotEmpty ? 'v$cleanFw' : '—',
               ),
               _buildDiagRow(
                 'Hardware Model',
@@ -237,7 +203,7 @@ class _DeviceActionsCardState extends ConsumerState<DeviceActionsCard> {
                 title: 'Check Firmware Update',
                 subtitle: 'Verify or install SMP MCUboot firmware over BLE',
                 isEnabled: isConnected,
-                onTap: () => _handleOtaCheck(context),
+                onTap: () => _handleOtaCheck(context, ref),
               ),
               Divider(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
 
@@ -376,8 +342,11 @@ class _DeviceActionsCardState extends ConsumerState<DeviceActionsCard> {
     );
   }
 
-  void _handleOtaCheck(BuildContext context) {
-    ref.read(chordOtaProvider.notifier).resetState();
+  void _handleOtaCheck(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(chordOtaProvider.notifier)..resetState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifier.checkForCloudUpdate();
+    });
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

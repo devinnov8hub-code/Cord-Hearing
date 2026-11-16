@@ -13,7 +13,6 @@ class OtaUpdateSheet extends ConsumerWidget {
     final dashState = ref.watch(dashboardProvider);
     final otaState = ref.watch(chordOtaProvider);
     final otaController = ref.read(chordOtaProvider.notifier);
-    final devUnlocked = ref.watch(developerOtaUnlockedProvider);
 
     final runningVer = dashState.firmwareVersion.trim().isNotEmpty
         ? 'v${dashState.firmwareVersion.trim()}'
@@ -106,36 +105,166 @@ class OtaUpdateSheet extends ConsumerWidget {
               ),
               14.verticalSpace,
 
-              // Cloud status banner (when idle)
-              if (otaState.phase == OtaPhase.idle) ...[
-                Container(
-                  padding: const EdgeInsets.all(12).r,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(color: const Color(0xFF86EFAC)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: Color(0xFF16A34A),
-                      ),
-                      8.horizontalSpace,
-                      Expanded(
-                        child: Text(
-                          'Device is up to date on $runningVer ($hwRev).',
-                          style: TextStyle(
-                            fontSize: 12.spMin,
-                            color: const Color(0xFF166534),
-                            fontWeight: FontWeight.w500,
+              // Cloud Firmware Check & Update Available Section
+              if (otaState.phase == OtaPhase.idle &&
+                  otaState.selectedImage == null) ...[
+                if (otaState.availableCloudRelease != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14).r,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F7FF),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: const Color(0xFFB9DCF7)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Update Available: v${otaState.availableCloudRelease!.version}',
+                              style: TextStyle(
+                                fontSize: 14.spMin,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primaryColor,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ).r,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryColor.withValues(
+                                  alpha: 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Text(
+                                otaState.availableCloudRelease!.signing
+                                    .toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10.spMin,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        8.verticalSpace,
+                        _buildMetaRow(
+                          'Version Transition',
+                          '$runningVer  →  v${otaState.availableCloudRelease!.version}',
+                          valueColor: AppColors.primaryColor,
+                        ),
+                        4.verticalSpace,
+                        if (otaState.availableCloudRelease!.board.isNotEmpty)
+                          _buildMetaRow(
+                            'Board Target',
+                            otaState.availableCloudRelease!.board,
+                          ),
+                        if (otaState.availableCloudRelease!.size > 0) ...[
+                          4.verticalSpace,
+                          _buildMetaRow(
+                            'Binary Size',
+                            '${(otaState.availableCloudRelease!.size / 1024).toStringAsFixed(1)} KB',
+                          ),
+                        ],
+                        if (otaState.availableCloudRelease!.notes.isNotEmpty) ...[
+                          8.verticalSpace,
+                          Text(
+                            'Release Notes: ${otaState.availableCloudRelease!.notes}',
+                            style: TextStyle(
+                              fontSize: 12.spMin,
+                              color: Colors.grey[700],
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                        12.verticalSpace,
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: (batteryOk && streamingOk)
+                                ? otaController.downloadAndInstallCloudUpdate
+                                : null,
+                            icon: const Icon(
+                              Icons.cloud_download_outlined,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              'Download & Install v${otaState.availableCloudRelease!.version}',
+                              style: TextStyle(
+                                fontSize: 13.spMin,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryColor,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                              ).r,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                              elevation: 0,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                12.verticalSpace,
+                  12.verticalSpace,
+                ] else if (otaState.checkedCloud &&
+                    otaState.errorMessage == null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12).r,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: Color(0xFF16A34A),
+                        ),
+                        8.horizontalSpace,
+                        Expanded(
+                          child: Text(
+                            'Device is up to date on $runningVer ($hwRev).',
+                            style: TextStyle(
+                              fontSize: 12.spMin,
+                              color: const Color(0xFF166534),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: otaController.checkForCloudUpdate,
+                          child: const Text('Recheck'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  12.verticalSpace,
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: otaController.checkForCloudUpdate,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Check Cloud for Firmware Update'),
+                    ),
+                  ),
+                  12.verticalSpace,
+                ],
               ],
 
               // Selected Image Comparison Card
@@ -395,109 +524,6 @@ class OtaUpdateSheet extends ConsumerWidget {
                 ),
                 14.verticalSpace,
               ],
-
-              // Developer-Only "Install from file" Section (Section 8)
-              if (devUnlocked && !otaState.isBusy) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14).r,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(
-                      color: AppColors.primaryColor.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.developer_mode,
-                            size: 18.spMin,
-                            color: AppColors.primaryColor,
-                          ),
-                          6.horizontalSpace,
-                          Text(
-                            'Developer OTA — Install from File',
-                            style: TextStyle(
-                              fontSize: 13.spMin,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      6.verticalSpace,
-                      Text(
-                        'Select a signed MCUboot .bin file for image 0 (application core). Never upload dfu_application.zip directly — unpack it first.',
-                        style: TextStyle(
-                          fontSize: 11.spMin,
-                          color: Colors.grey[700],
-                          height: 1.35,
-                        ),
-                      ),
-                      12.verticalSpace,
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: otaController.pickLocalFirmwareFile,
-                              icon: const Icon(Icons.folder_open, size: 18),
-                              label: Text(
-                                otaState.selectedImage == null
-                                    ? 'Install from file (.bin)'
-                                    : 'Change .bin file',
-                                style: TextStyle(fontSize: 12.spMin),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primaryColor,
-                                side: const BorderSide(
-                                  color: AppColors.primaryColor,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10.r),
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (otaState.selectedImage != null) ...[
-                            10.horizontalSpace,
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: (batteryOk && streamingOk)
-                                    ? otaController.startFirmwareUpload
-                                    : null,
-                                icon: const Icon(
-                                  Icons.upload_rounded,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                                label: Text(
-                                  'Start OTA Upload',
-                                  style: TextStyle(
-                                    fontSize: 12.spMin,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10.r),
-                                  ),
-                                  elevation: 0,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -507,6 +533,10 @@ class OtaUpdateSheet extends ConsumerWidget {
 
   String _phaseTitle(OtaPhase phase) {
     switch (phase) {
+      case OtaPhase.checkingCloud:
+        return 'Checking Firebase for Updates';
+      case OtaPhase.downloading:
+        return 'Downloading Firmware Binary';
       case OtaPhase.uploading:
         return 'Uploading Firmware via SMP (mcumgr)';
       case OtaPhase.markingTestOnly:

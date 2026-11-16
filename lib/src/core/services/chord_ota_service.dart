@@ -4,17 +4,9 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:cord_hearing/src/core/services/bluetooth_device_service.dart';
+import 'package:cord_hearing/src/core/services/firebase_ota_service.dart';
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-/// Tracks whether the developer-only "Install from file" OTA mode is unlocked.
-/// Enabled automatically in [kDebugMode], or unlocked at runtime via the
-/// 5-tap gesture on the Firmware Version row in Device Diagnostics.
-final StateProvider<bool> developerOtaUnlockedProvider = StateProvider<bool>(
-  (ref) => kDebugMode,
-);
 
 /// Parsed metadata from a 32-byte MCUboot image header (`struct image_header`).
 class McubootImageInfo {
@@ -144,7 +136,16 @@ class McubootImageInfo {
           '.bin for image 0 (the application core) is supported.';
     }
     if (hw.contains('nrf5340') &&
-        (lowerName.contains('nrf52') || lowerName.contains('nrf91'))) {
+        (lowerName.contains('nrf52') ||
+            lowerName.contains('nrf91') ||
+            lowerName.contains('chord_body'))) {
+      return 'Hardware mismatch: Image "$fileName" does not match connected '
+          'Hardware Revision "$deviceHardwareRevision" (0x2A27).';
+    }
+    if (hw.contains('chord_body') &&
+        (lowerName.contains('nrf5340dk') ||
+            lowerName.contains('nrf52') ||
+            lowerName.contains('nrf91'))) {
       return 'Hardware mismatch: Image "$fileName" does not match connected '
           'Hardware Revision "$deviceHardwareRevision" (0x2A27).';
     }
@@ -154,6 +155,8 @@ class McubootImageInfo {
 
 enum OtaPhase {
   idle,
+  checkingCloud,
+  downloading,
   readyToUpload,
   uploading,
   markingTestOnly,
@@ -169,6 +172,8 @@ class OtaState {
   const OtaState({
     this.phase = OtaPhase.idle,
     this.selectedImage,
+    this.availableCloudRelease,
+    this.checkedCloud = false,
     this.runningVersionBefore = '',
     this.runningVersionAfter = '',
     this.hardwareRevision = '',
@@ -182,6 +187,8 @@ class OtaState {
 
   final OtaPhase phase;
   final McubootImageInfo? selectedImage;
+  final CloudFirmwareManifest? availableCloudRelease;
+  final bool checkedCloud;
   final String runningVersionBefore;
   final String runningVersionAfter;
   final String hardwareRevision;
@@ -193,6 +200,8 @@ class OtaState {
   final String? errorMessage;
 
   bool get isBusy =>
+      phase == OtaPhase.checkingCloud ||
+      phase == OtaPhase.downloading ||
       phase == OtaPhase.uploading ||
       phase == OtaPhase.markingTestOnly ||
       phase == OtaPhase.resetting ||
@@ -203,6 +212,9 @@ class OtaState {
     OtaPhase? phase,
     McubootImageInfo? selectedImage,
     bool clearSelectedImage = false,
+    CloudFirmwareManifest? availableCloudRelease,
+    bool clearAvailableCloudRelease = false,
+    bool? checkedCloud,
     String? runningVersionBefore,
     String? runningVersionAfter,
     String? hardwareRevision,
@@ -219,6 +231,10 @@ class OtaState {
       selectedImage: clearSelectedImage
           ? null
           : (selectedImage ?? this.selectedImage),
+      availableCloudRelease: clearAvailableCloudRelease
+          ? null
+          : (availableCloudRelease ?? this.availableCloudRelease),
+      checkedCloud: checkedCloud ?? this.checkedCloud,
       runningVersionBefore: runningVersionBefore ?? this.runningVersionBefore,
       runningVersionAfter: runningVersionAfter ?? this.runningVersionAfter,
       hardwareRevision: hardwareRevision ?? this.hardwareRevision,
@@ -457,11 +473,9 @@ class _CborReader {
   }
 }
 
-/// Controller managing the Section 8 Local-File SMP (`mcumgr`) Firmware Update.
+/// Controller managing the Firebase Cloud SMP (`mcumgr`) Firmware Update.
 class ChordOtaController extends AutoDisposeNotifier<OtaState> {
-  static const MethodChannel _filePickerChannel = MethodChannel(
-    'com.cordhearingaid.app/ota_file_picker',
-  );
+  final FirebaseOtaService _firebaseOta = FirebaseOtaService();
 
   int _seq = 0;
   bool _cancelled = false;
@@ -478,46 +492,72 @@ class ChordOtaController extends AutoDisposeNotifier<OtaState> {
     );
   }
 
-  /// Opens the native system document picker, validates that the file is a
-  /// signed `.bin` for image 0 (rejecting `.zip` / `dfu_application.zip`),
-  /// parses the 32-byte MCUboot header, and compares with Hardware Revision.
-  Future<void> pickLocalFirmwareFile() async {
+  /// Checks Firebase Storage (`firmware/manifests/<hardwareRevision>/`) for
+  /// a newer firmware release matching this CHORD hardware.
+  Future<void> checkForCloudUpdate() async {
+    if (state.isBusy) return;
     final repo = ref.read(deviceRepositoryProvider);
     final runningVer = repo.currentFirmwareVersion;
     final hwRev = repo.currentHardwareRevision;
 
+    state = state.copyWith(
+      phase: OtaPhase.checkingCloud,
+      runningVersionBefore: runningVer,
+      hardwareRevision: hwRev,
+      clearAvailableCloudRelease: true,
+      checkedCloud: false,
+      statusMessage: 'Checking Firebase Storage for firmware updates...',
+      clearError: true,
+    );
+
     try {
-      final result = await _filePickerChannel
-          .invokeMapMethod<String, dynamic>('pickFirmwareFile');
-      if (result == null) {
-        return; // User cancelled picker
-      }
+      final manifest = await _firebaseOta.checkForUpdate(
+        hardwareRevision: hwRev,
+        runningVersion: runningVer,
+      );
+      state = state.copyWith(
+        phase: OtaPhase.idle,
+        availableCloudRelease: manifest,
+        clearAvailableCloudRelease: manifest == null,
+        checkedCloud: true,
+        statusMessage: manifest != null
+            ? 'Firmware v${manifest.version} is available.'
+            : 'Device is up to date.',
+      );
+    } on FormatException catch (e) {
+      state = state.copyWith(
+        phase: OtaPhase.idle,
+        checkedCloud: true,
+        errorMessage: e.message,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        phase: OtaPhase.idle,
+        checkedCloud: true,
+        errorMessage: 'Cloud update check failed: $e',
+      );
+    }
+  }
 
-      final fileName = (result['name'] as String?) ?? 'firmware.bin';
-      final rawBytes = result['bytes'];
-      final Uint8List bytes;
-      if (rawBytes is Uint8List) {
-        bytes = rawBytes;
-      } else if (rawBytes is List<int>) {
-        bytes = Uint8List.fromList(rawBytes);
-      } else {
-        throw const FormatException('Unable to read bytes from selected file.');
-      }
+  /// Downloads the available cloud firmware `.signed.bin`, verifies its SHA-256
+  /// and MCUboot header, and starts the SMP OTA upload if preconditions pass.
+  Future<void> downloadAndInstallCloudUpdate() async {
+    final manifest = state.availableCloudRelease;
+    if (manifest == null || state.isBusy) return;
 
-      final imageInfo = McubootImageInfo.parse(fileName, bytes);
-      final hwMismatch = imageInfo.validateHardwareCompatibility(hwRev);
+    final repo = ref.read(deviceRepositoryProvider);
+    final runningVer = repo.currentFirmwareVersion;
+    final hwRev = repo.currentHardwareRevision;
 
-      if (hwMismatch != null) {
-        state = state.copyWith(
-          phase: OtaPhase.failed,
-          clearSelectedImage: true,
-          runningVersionBefore: runningVer,
-          hardwareRevision: hwRev,
-          errorMessage: hwMismatch,
-        );
-        return;
-      }
+    state = state.copyWith(
+      phase: OtaPhase.downloading,
+      statusMessage:
+          'Downloading v${manifest.version} (${(manifest.size / 1024).toStringAsFixed(1)} KB)...',
+      clearError: true,
+    );
 
+    try {
+      final imageInfo = await _firebaseOta.downloadAndVerifyFirmware(manifest);
       state = state.copyWith(
         phase: OtaPhase.readyToUpload,
         selectedImage: imageInfo,
@@ -527,32 +567,18 @@ class ChordOtaController extends AutoDisposeNotifier<OtaState> {
         bytesSent: 0,
         totalBytes: imageInfo.bytes.length,
         statusMessage:
-            'Ready to upload ${imageInfo.fileName} (v${imageInfo.version})',
-        clearError: true,
+            'Verified ${imageInfo.fileName} (v${imageInfo.version}). Starting upload...',
       );
+      await startFirmwareUpload();
     } on FormatException catch (e) {
       state = state.copyWith(
         phase: OtaPhase.failed,
-        clearSelectedImage: true,
-        runningVersionBefore: runningVer,
-        hardwareRevision: hwRev,
         errorMessage: e.message,
-      );
-    } on PlatformException catch (e) {
-      state = state.copyWith(
-        phase: OtaPhase.failed,
-        clearSelectedImage: true,
-        runningVersionBefore: runningVer,
-        hardwareRevision: hwRev,
-        errorMessage: e.message ?? 'Failed to open file picker.',
       );
     } catch (e) {
       state = state.copyWith(
         phase: OtaPhase.failed,
-        clearSelectedImage: true,
-        runningVersionBefore: runningVer,
-        hardwareRevision: hwRev,
-        errorMessage: e.toString(),
+        errorMessage: 'Failed to download firmware: $e',
       );
     }
   }

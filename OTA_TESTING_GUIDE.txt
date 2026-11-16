@@ -1,0 +1,81 @@
+CHORD COMPANION APP — FIRMWARE OTA UPDATE GUIDE FOR TESTERS
+============================================================
+
+1. OVERVIEW
+-----------
+The CHORD Companion App performs Over-The-Air (OTA) firmware updates over
+Bluetooth Low Energy (BLE) using Firebase Storage for firmware distribution,
+Nordic SMP (mcumgr) for transfer, and MCUboot dual-slot image swapping.
+
+
+2. AUTOMATIC HARDWARE SELECTION (DEV KIT VS. PRODUCTION)
+--------------------------------------------------------
+You do NOT need different app builds for Dev Kit vs. Production hardware.
+When the app connects to a CHORD unit, it reads the device's Hardware Revision
+over BLE (Device Information Service, characteristic 0x2A27):
+
+  - Dev Kit (0x2A27 = "nrf5340dk"):
+      Checks: firmware/manifests/nrf5340dk/
+      Images: firmware/images/nrf5340dk/
+
+  - Production Body Unit (0x2A27 = "chord_body_c51ce1a"):
+      Checks: firmware/manifests/chord_body_c51ce1a/
+      Images: firmware/images/chord_body_c51ce1a/
+
+You can verify which hardware string the connected unit reports under:
+  Profile & Settings -> Device Diagnostics -> Hardware Revision
+
+
+3. PRE-CONDITIONS (ENFORCED BY THE APP)
+---------------------------------------
+Before an OTA upload can start, the app checks:
+  1) Device is connected over BLE.
+  2) Battery level is at least 30% (if known).
+  3) Audio is NOT currently streaming (pause music/calls before updating).
+
+
+4. HOW TO TEST CLOUD OTA (FIREBASE STORAGE)
+-------------------------------------------
+1. Sign in to the app and connect to your CHORD device.
+2. Open Profile & Settings -> CHORD Management & Actions -> Check Firmware Update.
+3. The app automatically queries Firebase Storage for manifests matching the
+   device's Hardware Revision (0x2A27) and compares them against the running
+   firmware version (characteristic 9e32000e).
+4. If a newer version is found (for example, v0.3.0 -> v0.3.2):
+   - The sheet displays the target version, board, binary size, and release notes.
+   - Tap "Download & Install vX.Y.Z".
+5. The app downloads the .signed.bin file, verifies its byte size, SHA-256 hash,
+   and 32-byte MCUboot header, and automatically begins the BLE SMP upload.
+
+
+5. WHAT HAPPENS DURING THE UPDATE (DO NOT POWER OFF)
+----------------------------------------------------
+1. Upload (SMP Group 1, ID 1):
+   - Firmware chunks are sent over BLE SMP with a live progress bar (0-100%).
+2. Test-Only Mode (SMP Group 1, ID 0, confirm: false):
+   - The app marks Slot 1 as "Test-Only" and NEVER confirms from the app.
+   - The CHORD firmware is responsible for confirming itself after booting.
+3. Reboot & MCUboot Swap (up to 90 seconds):
+   - The unit reboots and BLE disconnects while MCUboot swaps Slot 1 -> Slot 0.
+   - On nRF5340, this swap typically takes 45-60 seconds.
+   - Keep the unit powered on and near the phone.
+4. Auto-Reconnect & Result:
+   - The app automatically reconnects once the unit finishes swapping and
+     reads the running firmware version (9e32000e):
+       * Green "Firmware Update Succeeded": running version matches target.
+       * Amber "Firmware Rolled Back by MCUboot": new firmware failed to boot/
+         confirm and MCUboot reverted to the previous working version.
+
+
+6. TROUBLESHOOTING
+------------------
+- "Cloud update check failed" / permission error:
+  Ensure you are signed into the app and Firebase Storage Rules allow
+  authenticated reads on /firmware/{allPaths=**}.
+- "Hardware mismatch" error:
+  The manifest or binary does not match the connected unit's Hardware Revision
+  (0x2A27), or targets the network core instead of the application core.
+- Swap countdown reaches 90s without reconnecting:
+  Check the unit's status LED. If off, press the power button to wake it, then
+  reconnect from the app and check Device Diagnostics -> Firmware Version &
+  Active Fault Code.
