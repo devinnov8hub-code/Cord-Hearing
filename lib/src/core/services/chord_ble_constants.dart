@@ -68,7 +68,7 @@ class ChordBleConstants {
   /// Mute: 0 unmuted, 1 muted (Read, Write, Notify)
   static final Guid muteCharacteristicUuid = customGuid('000d');
 
-  static const String appVersion = '1.1.0+2';
+  static const String appVersion = '1.1.0+4';
 
   /// Firmware version: 3 raw bytes {major, minor, patch}, e.g. 00 03 00 -> v0.3.0 (Read)
   static final Guid firmwareVersionCharacteristicUuid = customGuid('000e');
@@ -234,7 +234,8 @@ enum ChordControlStatus {
   invalidParam(0x02, 'Invalid parameter'),
   notSupported(0x03, 'Hardware or firmware cannot do this'),
   notAllowed(0x04, 'Not in current state'),
-  unknown(-1, 'Unknown response');
+  unknown(-1, 'Unknown response')
+  ;
 
   const ChordControlStatus(this.value, this.description);
   final int value;
@@ -252,7 +253,8 @@ enum ChordControlStatus {
 enum ChordMicMode {
   omni(0, 'Omnidirectional'),
   directional(1, 'Directional'),
-  bypass(2, 'Bypass');
+  bypass(2, 'Bypass')
+  ;
 
   const ChordMicMode(this.value, this.label);
   final int value;
@@ -280,7 +282,8 @@ enum ChordProfile {
     'Music',
     'Full range',
     'Fuller low end (+2 dB), flatter mids for rich audio',
-  );
+  )
+  ;
 
   const ChordProfile(this.value, this.label, this.subtitle, this.description);
   final int value;
@@ -342,7 +345,8 @@ enum ChordFaultCode {
     'The earpiece stopped answering while running',
     'Check the cable',
   ),
-  unknown(-1, 'Fault', 'General device fault', 'Contact support');
+  unknown(-1, 'Fault', 'General device fault', 'Contact support')
+  ;
 
   const ChordFaultCode(this.code, this.screenLabel, this.meaning, this.action);
   final int code;
@@ -366,7 +370,8 @@ enum ChordFaultCode {
 enum ChordChargingStatus {
   discharging(0, 'Discharging'),
   charging(1, 'Charging'),
-  complete(2, 'Fully Charged');
+  complete(2, 'Fully Charged')
+  ;
 
   const ChordChargingStatus(this.value, this.label);
   final int value;
@@ -384,7 +389,8 @@ enum ChordChargingStatus {
 enum ChordConnectionTelemetry {
   disconnected(0, 'Disconnected'),
   connected(1, 'Connected'),
-  streamingAudio(2, 'Streaming Audio');
+  streamingAudio(2, 'Streaming Audio')
+  ;
 
   const ChordConnectionTelemetry(this.value, this.label);
   final int value;
@@ -402,7 +408,8 @@ enum ChordConnectionTelemetry {
 enum ChordAudioTransport {
   none(0, 'None'),
   leAudio(1, 'LE Audio'),
-  asha(2, 'ASHA');
+  asha(2, 'ASHA')
+  ;
 
   const ChordAudioTransport(this.value, this.label);
   final int value;
@@ -422,7 +429,8 @@ enum ChordEarpieceState {
   booting(1, 'Booting'),
   ready(2, 'Ready'),
   recovering(3, 'Recovering'),
-  failed(4, 'Failed / Unplugged');
+  failed(4, 'Failed / Unplugged')
+  ;
 
   const ChordEarpieceState(this.value, this.label);
   final int value;
@@ -440,7 +448,8 @@ enum ChordEarpieceState {
 enum ChordDeviceStatus {
   ok(0, 'OK'),
   batteryLow(10, 'Battery Low'),
-  batteryWarning(15, 'Battery Warning');
+  batteryWarning(15, 'Battery Warning')
+  ;
 
   const ChordDeviceStatus(this.value, this.label);
   final int value;
